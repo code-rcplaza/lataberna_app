@@ -1,0 +1,135 @@
+type Query {
+  me: User
+  characters: [Character!]!
+  character(id: ID!): Character
+}
+
+type Mutation {
+  requestMagicLink(email: String!): Boolean!
+  verifyMagicLink(token: String!): AuthPayload!
+  logout: Boolean!
+
+  generateCharacter(input: GenerateCharacterInput): Character!
+  regenerateCharacter(id: ID!, locks: CharacterLocksInput!, seed: Int): Character!
+  regenerateDraft(current: CurrentCharacterInput!, locks: CharacterLocksInput!, seed: Int): Character!
+  saveCharacter(input: GenerateCharacterInput!, seed: Int!): Character!
+  editCharacter(id: ID!, input: EditCharacterInput!): Character!
+  deleteCharacter(id: ID!): Boolean!
+}
+
+type AuthPayload {
+  sessionId: String!
+  user: User!
+}
+
+type User {
+  id: ID!
+  email: String!
+}
+
+type Character {
+  id: ID!
+  name: String!
+  species: String!
+  subSpecies: String
+  class: String!
+  level: Int!
+  ruleset: String!
+  baseStats: Stats!
+  finalStats: Stats!
+  modifiers: Stats!
+  derived: DerivedStats!
+  background: NarrativeBlock!
+  motivation: NarrativeBlock!
+  secret: NarrativeBlock!
+  locks: CharacterLocks!
+  seed: Int
+  createdAt: String!
+  updatedAt: String!
+}
+
+type Stats {
+  STR: Int!
+  DEX: Int!
+  CON: Int!
+  INT: Int!
+  WIS: Int!
+  CHA: Int!
+}
+
+type DerivedStats {
+  hp: Int!
+  ac: Int!
+}
+
+type NarrativeBlock {
+  category: String!
+  content: String!
+  tags: [String!]!
+}
+
+type CharacterLocks {
+  name: Boolean!
+  stats: Boolean!
+  background: Boolean!
+  motivation: Boolean!
+  secret: Boolean!
+}
+
+input GenerateCharacterInput {
+  name: String
+  class: String
+  species: String
+  subSpecies: String
+  gender: String
+  seed: Int
+}
+
+input CharacterLocksInput {
+  name: Boolean!
+  stats: Boolean!
+  background: Boolean!
+  motivation: Boolean!
+  secret: Boolean!
+}
+
+input EditCharacterInput {
+  name: String
+  background: String
+  motivation: String
+  secret: String
+}
+
+input StatsInput {
+  STR: Int!
+  DEX: Int!
+  CON: Int!
+  INT: Int!
+  WIS: Int!
+  CHA: Int!
+}
+
+input NarrativeBlockInput {
+  category: String!
+  content: String!
+  tags: [String!]!
+}
+
+input DerivedStatsInput {
+  hp: Int!
+  ac: Int!
+}
+
+input CurrentCharacterInput {
+  name: String!
+  class: String!
+  species: String!
+  subSpecies: String
+  gender: String
+  seed: Int
+  finalStats: StatsInput!
+  derived: DerivedStatsInput!
+  background: NarrativeBlockInput!
+  motivation: NarrativeBlockInput!
+  secret: NarrativeBlockInput!
+}

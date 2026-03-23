@@ -1,0 +1,291 @@
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useLibraryStore } from '@/stores/useLibraryStore'
+import { useLibraryAPI } from '@/composables/useCharacterAPI'
+import type { EditCharacterInput } from '@/types/character'
+
+const route = useRoute()
+const router = useRouter()
+const libraryStore = useLibraryStore()
+const { getCharacter, deleteCharacter, editCharacter } = useLibraryAPI()
+
+const deleteError = ref<string | null>(null)
+const editError = ref<string | null>(null)
+const editSuccess = ref(false)
+
+// Edit state
+const editingName = ref(false)
+const nameInput = ref('')
+const nameValidationError = ref<string | null>(null)
+
+const statKeys = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'] as const
+
+const speciesLabels: Record<string, string> = {
+  human: 'Humano', elf: 'Elfo', dwarf: 'Enano', halfling: 'Mediano', gnome: 'Gnomo',
+  'half-elf': 'Semielfo', 'half-orc': 'Semiorco', tiefling: 'Tiefling', dragonborn: 'Dragonborn',
+}
+const subSpeciesLabels: Record<string, string> = {
+  'high-elf': 'Alto Elfo', 'wood-elf': 'Elfo del Bosque', 'drow': 'Drow',
+  'hill-dwarf': 'Enano de las Colinas', 'mountain-dwarf': 'Enano de la Montaña',
+  'lightfoot': 'Pie Ligero', 'stout': 'Robusto',
+  'forest-gnome': 'Gnomo del Bosque', 'rock-gnome': 'Gnomo de Roca',
+  'tiefling-infernal': 'Linaje Infernal', 'tiefling-virtue': 'Linaje Virtud',
+}
+const classLabels: Record<string, string> = {
+  barbarian: 'Bárbaro', bard: 'Bardo', cleric: 'Clérigo', druid: 'Druida', fighter: 'Guerrero',
+  monk: 'Monje', paladin: 'Paladín', ranger: 'Montaraz', rogue: 'Pícaro', sorcerer: 'Hechicero',
+  warlock: 'Brujo', wizard: 'Mago', artificer: 'Artificiero',
+}
+const statLabels: Record<string, string> = {
+  STR: 'FUE', DEX: 'DES', CON: 'CON', INT: 'INT', WIS: 'SAB', CHA: 'CAR',
+}
+const narrativeTitles: Record<string, string> = {
+  background: 'Origen', motivation: 'Motivación', secret: 'Secreto',
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('es-AR', {
+    day: '2-digit', month: 'long', year: 'numeric',
+  })
+}
+
+function modifierDisplay(mod: number): string {
+  return mod >= 0 ? `+${mod}` : `${mod}`
+}
+
+onMounted(async () => {
+  const id = route.params.id as string
+  libraryStore.setSelected(null)
+  try {
+    await getCharacter(id)
+  } catch {
+    // error is set in libraryStore.error
+  }
+})
+
+async function handleDelete() {
+  const character = libraryStore.selected
+  if (!character) return
+  const confirmed = window.confirm(`¿Eliminar a ${character.name}? Esta acción es irreversible.`)
+  if (!confirmed) return
+  deleteError.value = null
+  try {
+    await deleteCharacter(character.id)
+    router.push('/biblioteca')
+  } catch (err) {
+    deleteError.value = err instanceof Error ? err.message : 'Error al eliminar el personaje'
+  }
+}
+
+function startEditName() {
+  if (!libraryStore.selected) return
+  nameInput.value = libraryStore.selected.name
+  nameValidationError.value = null
+  editError.value = null
+  editSuccess.value = false
+  editingName.value = true
+}
+
+function cancelEditName() {
+  editingName.value = false
+  nameInput.value = ''
+  nameValidationError.value = null
+}
+
+async function submitEditName() {
+  const trimmed = nameInput.value.trim()
+  if (!trimmed) {
+    nameValidationError.value = 'El nombre no puede estar vacío.'
+    return
+  }
+  nameValidationError.value = null
+  editError.value = null
+  const patch: EditCharacterInput = { name: trimmed }
+  try {
+    await editCharacter(libraryStore.selected!.id, patch)
+    editingName.value = false
+    editSuccess.value = true
+    setTimeout(() => { editSuccess.value = false }, 3000)
+  } catch (err) {
+    editError.value = err instanceof Error ? err.message : 'Error al editar el personaje'
+  }
+}
+</script>
+
+<template>
+  <div class="max-w-[900px] mx-auto px-8 pb-12">
+
+    <!-- Back link -->
+    <div class="mb-6">
+      <RouterLink
+        to="/biblioteca"
+        class="flex items-center gap-1 text-secondary text-xs font-label font-bold uppercase tracking-widest hover:text-primary transition-colors"
+      >
+        <span class="material-symbols-outlined text-sm">arrow_back</span>
+        Biblioteca
+      </RouterLink>
+    </div>
+
+    <!-- Loading state -->
+    <div v-if="libraryStore.isLoading" class="flex flex-col items-center justify-center py-24 gap-4">
+      <span class="material-symbols-outlined text-primary text-5xl animate-spin">refresh</span>
+      <p class="text-outline text-sm font-label">Cargando personaje…</p>
+    </div>
+
+    <!-- Error / not found state -->
+    <div
+      v-else-if="libraryStore.error || !libraryStore.selected"
+      class="flex flex-col items-center justify-center py-24 gap-4"
+    >
+      <span class="material-symbols-outlined text-outline text-6xl">person_off</span>
+      <p class="font-headline text-on-surface text-xl">Personaje no encontrado</p>
+      <p class="text-outline text-sm">
+        {{ libraryStore.error ?? 'Este personaje no existe o no te pertenece.' }}
+      </p>
+      <RouterLink
+        to="/biblioteca"
+        class="mt-2 text-xs font-bold uppercase tracking-widest text-primary hover:text-primary-container transition-colors"
+      >
+        Volver a la Biblioteca
+      </RouterLink>
+    </div>
+
+    <!-- Character detail -->
+    <div v-else class="space-y-8">
+      <!-- Header -->
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex-1">
+          <!-- Name + edit -->
+          <div v-if="!editingName" class="flex items-center gap-3">
+            <h1 class="font-headline text-4xl font-bold text-on-surface">{{ libraryStore.selected.name }}</h1>
+            <button
+              @click="startEditName"
+              class="text-outline hover:text-primary transition-colors"
+              title="Editar nombre"
+            >
+              <span class="material-symbols-outlined text-base">edit</span>
+            </button>
+          </div>
+          <div v-else class="flex items-center gap-2">
+            <input
+              v-model="nameInput"
+              type="text"
+              class="font-headline text-2xl bg-surface-container border border-outline-variant text-on-surface px-3 py-1 focus:outline-none focus:border-primary"
+              @keyup.enter="submitEditName"
+              @keyup.escape="cancelEditName"
+            />
+            <button
+              @click="submitEditName"
+              :disabled="libraryStore.isLoading"
+              class="text-primary hover:text-primary-container transition-colors disabled:opacity-50"
+              title="Guardar"
+            >
+              <span class="material-symbols-outlined">check</span>
+            </button>
+            <button
+              @click="cancelEditName"
+              class="text-outline hover:text-on-surface transition-colors"
+              title="Cancelar"
+            >
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <p v-if="nameValidationError" class="text-error text-xs mt-1">{{ nameValidationError }}</p>
+          <p v-if="editSuccess" class="text-xs font-label mt-1 text-primary">¡Nombre actualizado!</p>
+
+          <p class="font-body text-secondary mt-1">
+            {{ speciesLabels[libraryStore.selected.species] ?? libraryStore.selected.species }}
+            <span v-if="libraryStore.selected.subSpecies">
+              · {{ subSpeciesLabels[libraryStore.selected.subSpecies] ?? libraryStore.selected.subSpecies }}
+            </span>
+            · {{ classLabels[libraryStore.selected.class] ?? libraryStore.selected.class }}
+            · Nivel {{ libraryStore.selected.level }}
+          </p>
+          <p class="text-xs text-outline mt-1">Guardado el {{ formatDate(libraryStore.selected.createdAt) }}</p>
+        </div>
+        <span class="text-[10px] font-bold uppercase tracking-widest text-secondary bg-surface-container px-3 py-1 mt-1">
+          {{ libraryStore.selected.ruleset }}
+        </span>
+      </div>
+
+      <!-- Edit error -->
+      <div v-if="editError" class="bg-error-container text-on-error-container text-sm px-4 py-3 rounded">
+        {{ editError }}
+      </div>
+
+      <!-- Combat stats -->
+      <div class="grid grid-cols-2 gap-4">
+        <div class="bg-surface-container-low p-5 flex flex-col items-center justify-center space-y-1">
+          <span class="text-[10px] font-bold uppercase tracking-widest text-secondary">Puntos de Golpe</span>
+          <span class="font-headline text-5xl font-bold text-primary">{{ libraryStore.selected.derived.hp }}</span>
+          <span class="text-xs text-outline font-body">HP máximos</span>
+        </div>
+        <div class="bg-surface-container-low p-5 flex flex-col items-center justify-center space-y-1">
+          <span class="text-[10px] font-bold uppercase tracking-widest text-secondary">Clase de Armadura</span>
+          <span class="font-headline text-5xl font-bold text-primary">{{ libraryStore.selected.derived.ac }}</span>
+          <span class="text-xs text-outline font-body">CA base</span>
+        </div>
+      </div>
+
+      <!-- Attributes -->
+      <div class="space-y-3">
+        <h3 class="font-headline text-lg font-bold text-on-surface">Atributos</h3>
+        <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+          <div
+            v-for="stat in statKeys"
+            :key="stat"
+            class="bg-surface-container-low p-3 flex flex-col items-center gap-1"
+          >
+            <span class="text-[10px] font-bold uppercase tracking-widest text-secondary">{{ statLabels[stat] }}</span>
+            <span class="font-headline text-2xl font-bold text-on-surface">{{ libraryStore.selected.finalStats[stat] }}</span>
+            <span class="text-xs font-label text-outline">{{ modifierDisplay(libraryStore.selected.modifiers[stat]) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Narrative -->
+      <div class="space-y-6">
+        <h3 class="font-headline text-lg font-bold text-on-surface">Narrativa</h3>
+        <div
+          v-for="blockKey in (['background', 'motivation', 'secret'] as const)"
+          :key="blockKey"
+          class="space-y-2"
+        >
+          <div class="border-t border-outline-variant/20 pt-4 first:border-t-0 first:pt-0">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-secondary mb-2">
+              {{ narrativeTitles[blockKey] }}
+            </p>
+            <p class="font-body text-on-surface text-sm leading-relaxed">
+              {{ libraryStore.selected[blockKey].content }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete error -->
+      <div v-if="deleteError" class="bg-error-container text-on-error-container text-sm px-4 py-3 rounded">
+        {{ deleteError }}
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-4 pt-4 border-t border-outline-variant/20">
+        <RouterLink
+          to="/biblioteca"
+          class="flex items-center gap-2 px-4 py-2 border border-outline-variant text-secondary font-label font-bold uppercase tracking-widest text-xs hover:border-primary hover:text-primary transition-colors"
+        >
+          <span class="material-symbols-outlined text-sm">arrow_back</span>
+          Volver
+        </RouterLink>
+        <button
+          @click="handleDelete"
+          :disabled="libraryStore.isLoading"
+          class="flex items-center gap-2 px-4 py-2 border border-error text-error font-label font-bold uppercase tracking-widest text-xs hover:bg-error hover:text-on-error transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          <span class="material-symbols-outlined text-sm">delete</span>
+          Eliminar
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
