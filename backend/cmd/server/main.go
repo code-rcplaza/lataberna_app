@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/joho/godotenv"
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/joho/godotenv"
 
 	"forge-rpg/graph"
 	"forge-rpg/graph/generated"
@@ -18,6 +18,8 @@ import (
 	"forge-rpg/internal/domain/ports"
 	"forge-rpg/internal/usecase/auth"
 	"forge-rpg/internal/usecase/character"
+	"forge-rpg/internal/usecase/namegen"
+	"forge-rpg/internal/usecase/narrativegen"
 )
 
 func main() {
@@ -35,11 +37,19 @@ func main() {
 	}
 	defer database.Close()
 
+	// Seed content on startup (idempotent — skips if already populated)
+	ctx := context.Background()
+	if err := infradb.SeedContentIfEmpty(ctx, database); err != nil {
+		log.Fatalf("seed content: %v", err)
+	}
+
 	// Repositories
 	userRepo := infradb.NewUserRepository(database)
 	sessionRepo := infradb.NewSessionRepository(database)
 	tokenRepo := infradb.NewTokenRepository(database)
 	charRepo := infradb.NewCharacterRepository(database)
+	narrativeRepo := infradb.NewNarrativeRepository(database)
+	nameRepo := infradb.NewNameRepository(database)
 
 	// Mailer
 	var mailer ports.Mailer
@@ -56,9 +66,12 @@ func main() {
 	// Services
 	authSvc := auth.NewService(userRepo, sessionRepo, tokenRepo, mailer, linkBase)
 	managerSvc := character.NewService(charRepo)
+	narrativeSvc := narrativegen.New(narrativeRepo)
+	nameSvc := namegen.New(nameRepo)
+	creatorSvc := character.NewCreator(narrativeSvc, nameSvc)
 
 	// GraphQL
-	resolver := graph.NewResolver(authSvc, managerSvc)
+	resolver := graph.NewResolver(authSvc, managerSvc, creatorSvc)
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{
 		Resolvers: resolver,
 	}))

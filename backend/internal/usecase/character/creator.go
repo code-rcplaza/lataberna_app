@@ -1,6 +1,7 @@
 package character
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"time"
@@ -30,9 +31,24 @@ type RegenerateInput struct {
 	Seed      *int64
 }
 
+// Creator orchestrates the full character generation pipeline.
+// It depends on narrativegen.Service and namegen.Service for content generation.
+type Creator struct {
+	narrativeSvc *narrativegen.Service
+	nameSvc      *namegen.Service
+}
+
+// NewCreator constructs a Creator with the given services.
+func NewCreator(narrativeSvc *narrativegen.Service, nameSvc *namegen.Service) *Creator {
+	return &Creator{
+		narrativeSvc: narrativeSvc,
+		nameSvc:      nameSvc,
+	}
+}
+
 // Create runs the full 9-step pipeline and returns a fully populated Character.
 // Same Seed + same CreateInput always returns the same Character.
-func Create(in CreateInput) (*domain.Character, error) {
+func (c *Creator) Create(ctx context.Context, in CreateInput) (*domain.Character, error) {
 	seed := resolveSeed(in.Seed)
 	rng := rand.New(rand.NewSource(seed))
 
@@ -58,13 +74,13 @@ func Create(in CreateInput) (*domain.Character, error) {
 	}
 
 	// Step 1 (name): generate name using class-resolved species.
-	name, err := resolveName(in.Name, species, subSpecies, in.Gender, nameSeed)
+	name, err := c.resolveName(ctx, in.Name, species, subSpecies, in.Gender, nameSeed)
 	if err != nil {
 		return nil, fmt.Errorf("character.Create: name: %w", err)
 	}
 
 	// Step 9: generate narrative.
-	narrOut, err := narrativegen.Generate(narrativegen.Input{
+	narrOut, err := c.narrativeSvc.Generate(ctx, narrativegen.Input{
 		Class:   &class,
 		Species: &species,
 		Seed:    &narrativeSeed,
@@ -99,7 +115,7 @@ func Create(in CreateInput) (*domain.Character, error) {
 
 // Regenerate re-executes only the unlocked fields of an existing character.
 // Locked fields are cloned from the input character unchanged.
-func Regenerate(in RegenerateInput) (*domain.Character, error) {
+func (c *Creator) Regenerate(ctx context.Context, in RegenerateInput) (*domain.Character, error) {
 	if in.Character == nil {
 		return nil, fmt.Errorf("character.Regenerate: character is required")
 	}
@@ -117,7 +133,7 @@ func Regenerate(in RegenerateInput) (*domain.Character, error) {
 	narrativeSeed := rng.Int63()
 
 	if !in.Locks.Name {
-		name, err := resolveName(nil, updated.Species, updated.SubSpecies, nil, nameSeed)
+		name, err := c.resolveName(ctx, nil, updated.Species, updated.SubSpecies, nil, nameSeed)
 		if err != nil {
 			return nil, fmt.Errorf("character.Regenerate: name: %w", err)
 		}
@@ -142,7 +158,7 @@ func Regenerate(in RegenerateInput) (*domain.Character, error) {
 	}
 
 	if !in.Locks.Background || !in.Locks.Motivation || !in.Locks.Secret {
-		narrOut, err := narrativegen.Generate(narrativegen.Input{
+		narrOut, err := c.narrativeSvc.Generate(ctx, narrativegen.Input{
 			Class:   &updated.Class,
 			Species: &updated.Species,
 			Seed:    &narrativeSeed,
@@ -222,18 +238,19 @@ func resolveSubSpecies(s domain.Species, sub *domain.SubSpecies, rng *rand.Rand)
 	return &picked
 }
 
-// resolveName returns the provided name directly or calls namegen.Generate.
-func resolveName(
-	name *string,
-	species domain.Species,
+// resolveName returns the provided name directly or calls nameSvc.Generate.
+func (c *Creator) resolveName(
+	ctx        context.Context,
+	name       *string,
+	species    domain.Species,
 	subSpecies *domain.SubSpecies,
-	gender *namegen.Gender,
-	seed int64,
+	gender     *namegen.Gender,
+	seed       int64,
 ) (string, error) {
 	if name != nil {
 		return *name, nil
 	}
-	out, err := namegen.Generate(namegen.Input{
+	out, err := c.nameSvc.Generate(ctx, namegen.Input{
 		Species:    species,
 		SubSpecies: subSpecies,
 		Gender:     gender,

@@ -1,17 +1,20 @@
 package character_test
 
 import (
+	"context"
 	"testing"
 
 	"forge-rpg/internal/domain"
+	"forge-rpg/internal/domain/ports"
 	"forge-rpg/internal/usecase/character"
 	"forge-rpg/internal/usecase/namegen"
+	"forge-rpg/internal/usecase/narrativegen"
 )
 
 // ptr helpers — keep tests readable.
-func ptrString(s string) *string      { return &s }
-func ptrInt64(n int64) *int64         { return &n }
-func ptrClass(c domain.Class) *domain.Class    { return &c }
+func ptrString(s string) *string                 { return &s }
+func ptrInt64(n int64) *int64                    { return &n }
+func ptrClass(c domain.Class) *domain.Class      { return &c }
 func ptrSpecies(s domain.Species) *domain.Species { return &s }
 
 // modifierFor computes the expected modifier from a final stat value.
@@ -19,14 +22,76 @@ func modifierFor(stat int) int {
 	if stat >= 10 {
 		return (stat - 10) / 2
 	}
-	// floor division for negative values
 	return (stat - 10 - 1) / 2
+}
+
+// ---------------------------------------------------------------------------
+// fakeNarrativeRepo — minimal stub for Creator tests
+// ---------------------------------------------------------------------------
+
+type fakeNarrativeRepo struct{}
+
+func (f *fakeNarrativeRepo) FindByCategory(
+	ctx      context.Context,
+	category domain.NarrativeCategory,
+	class    domain.Class,
+	species  domain.Species,
+) ([]ports.WeightedNarrativeEntry, error) {
+	contents := map[domain.NarrativeCategory][]string{
+		domain.NarrativeBackground: {
+			"Fondo A", "Fondo B", "Fondo C", "Fondo D", "Fondo E",
+		},
+		domain.NarrativeMotivation: {
+			"Motivación A", "Motivación B", "Motivación C", "Motivación D", "Motivación E",
+		},
+		domain.NarrativeSecret: {
+			"Secreto A", "Secreto B", "Secreto C", "Secreto D", "Secreto E",
+		},
+	}
+	pool := contents[category]
+	out := make([]ports.WeightedNarrativeEntry, len(pool))
+	for i, c := range pool {
+		out[i] = ports.WeightedNarrativeEntry{
+			Block:  domain.NarrativeBlock{Category: category, Content: c},
+			Weight: 2,
+		}
+	}
+	return out, nil
+}
+
+func (f *fakeNarrativeRepo) Count(ctx context.Context) (int, error) { return 15, nil }
+
+// ---------------------------------------------------------------------------
+// fakeNameRepo — minimal stub for Creator tests
+// ---------------------------------------------------------------------------
+
+type fakeNameRepo struct{}
+
+func (f *fakeNameRepo) FindBySpeciesGender(ctx context.Context, speciesKey, gender string) ([]string, error) {
+	names := []string{
+		"Aldric", "Brennan", "Cael", "Dorian", "Edric",
+		"Faolan", "Gareth", "Hadwin", "Isidor", "Jareth",
+		"Kiran", "Leoric", "Maddox", "Nolan", "Orwin",
+		"Phelan", "Quinn", "Roderick", "Soren", "Theron",
+		"Ulric", "Vance", "Wulfric", "Xander", "Yorick",
+	}
+	return names, nil
+}
+
+func (f *fakeNameRepo) Count(ctx context.Context) (int, error) { return 25, nil }
+
+// newTestCreator returns a Creator with fake repos for unit testing.
+func newTestCreator() *character.Creator {
+	narrativeSvc := narrativegen.New(&fakeNarrativeRepo{})
+	nameSvc := namegen.New(&fakeNameRepo{})
+	return character.NewCreator(narrativeSvc, nameSvc)
 }
 
 // --- Test: zero inputs produce a valid character ---
 
 func TestCreate_ZeroInputs_ReturnsValidCharacter(t *testing.T) {
-	out, err := character.Create(character.CreateInput{})
+	creator := newTestCreator()
+	out, err := creator.Create(context.Background(), character.CreateInput{})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -65,12 +130,13 @@ func TestCreate_ZeroInputs_ReturnsValidCharacter(t *testing.T) {
 // --- Test: same seed → identical character ---
 
 func TestCreate_SameSeed_ReproducibleResult(t *testing.T) {
+	creator := newTestCreator()
 	seed := int64(42)
-	a, err := character.Create(character.CreateInput{Seed: ptrInt64(seed)})
+	a, err := creator.Create(context.Background(), character.CreateInput{Seed: ptrInt64(seed)})
 	if err != nil {
 		t.Fatalf("first Create: %v", err)
 	}
-	b, err := character.Create(character.CreateInput{Seed: ptrInt64(seed)})
+	b, err := creator.Create(context.Background(), character.CreateInput{Seed: ptrInt64(seed)})
 	if err != nil {
 		t.Fatalf("second Create: %v", err)
 	}
@@ -107,8 +173,9 @@ func TestCreate_SameSeed_ReproducibleResult(t *testing.T) {
 // --- Test: provided class is preserved ---
 
 func TestCreate_ProvidedClass_IsPreserved(t *testing.T) {
+	creator := newTestCreator()
 	class := domain.ClassFighter
-	out, err := character.Create(character.CreateInput{Class: ptrClass(class)})
+	out, err := creator.Create(context.Background(), character.CreateInput{Class: ptrClass(class)})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -120,8 +187,9 @@ func TestCreate_ProvidedClass_IsPreserved(t *testing.T) {
 // --- Test: provided species is preserved ---
 
 func TestCreate_ProvidedSpecies_IsPreserved(t *testing.T) {
+	creator := newTestCreator()
 	species := domain.SpeciesElf
-	out, err := character.Create(character.CreateInput{Species: ptrSpecies(species)})
+	out, err := creator.Create(context.Background(), character.CreateInput{Species: ptrSpecies(species)})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -133,8 +201,9 @@ func TestCreate_ProvidedSpecies_IsPreserved(t *testing.T) {
 // --- Test: provided name is preserved ---
 
 func TestCreate_ProvidedName_IsPreserved(t *testing.T) {
+	creator := newTestCreator()
 	name := "Aldric"
-	out, err := character.Create(character.CreateInput{Name: ptrString(name)})
+	out, err := creator.Create(context.Background(), character.CreateInput{Name: ptrString(name)})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -147,24 +216,16 @@ func TestCreate_ProvidedName_IsPreserved(t *testing.T) {
 
 func TestCreate_AllClasses_GenerateWithoutError(t *testing.T) {
 	classes := []domain.Class{
-		domain.ClassBarbarian,
-		domain.ClassBard,
-		domain.ClassCleric,
-		domain.ClassDruid,
-		domain.ClassFighter,
-		domain.ClassMonk,
-		domain.ClassPaladin,
-		domain.ClassRanger,
-		domain.ClassRogue,
-		domain.ClassSorcerer,
-		domain.ClassWarlock,
-		domain.ClassWizard,
+		domain.ClassBarbarian, domain.ClassBard, domain.ClassCleric, domain.ClassDruid,
+		domain.ClassFighter, domain.ClassMonk, domain.ClassPaladin, domain.ClassRanger,
+		domain.ClassRogue, domain.ClassSorcerer, domain.ClassWarlock, domain.ClassWizard,
 		domain.ClassArtificer,
 	}
 	for _, class := range classes {
 		class := class
 		t.Run(string(class), func(t *testing.T) {
-			out, err := character.Create(character.CreateInput{Class: ptrClass(class)})
+			creator := newTestCreator()
+			out, err := creator.Create(context.Background(), character.CreateInput{Class: ptrClass(class)})
 			if err != nil {
 				t.Fatalf("class %q: expected no error, got %v", class, err)
 			}
@@ -178,8 +239,9 @@ func TestCreate_AllClasses_GenerateWithoutError(t *testing.T) {
 // --- Test: modifiers match finalStats ---
 
 func TestCreate_Modifiers_MatchFinalStats(t *testing.T) {
+	creator := newTestCreator()
 	seed := int64(99)
-	out, err := character.Create(character.CreateInput{Seed: ptrInt64(seed)})
+	out, err := creator.Create(context.Background(), character.CreateInput{Seed: ptrInt64(seed)})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -207,7 +269,8 @@ func TestCreate_Modifiers_MatchFinalStats(t *testing.T) {
 // --- Test: Regenerate with nil character returns error ---
 
 func TestRegenerate_NilCharacter_ReturnsError(t *testing.T) {
-	_, err := character.Regenerate(character.RegenerateInput{
+	creator := newTestCreator()
+	_, err := creator.Regenerate(context.Background(), character.RegenerateInput{
 		Character: nil,
 		Locks:     domain.CharacterLocks{},
 	})
@@ -219,12 +282,13 @@ func TestRegenerate_NilCharacter_ReturnsError(t *testing.T) {
 // --- Test: locked name is preserved on Regenerate ---
 
 func TestRegenerate_NameLocked_NameUnchanged(t *testing.T) {
-	original, err := character.Create(character.CreateInput{Seed: ptrInt64(1)})
+	creator := newTestCreator()
+	original, err := creator.Create(context.Background(), character.CreateInput{Seed: ptrInt64(1)})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 
-	regen, err := character.Regenerate(character.RegenerateInput{
+	regen, err := creator.Regenerate(context.Background(), character.RegenerateInput{
 		Character: original,
 		Locks:     domain.CharacterLocks{Name: true},
 		Seed:      ptrInt64(2),
@@ -240,16 +304,15 @@ func TestRegenerate_NameLocked_NameUnchanged(t *testing.T) {
 // --- Test: unlocked name changes on Regenerate with different seed ---
 
 func TestRegenerate_NameUnlocked_NameChanges(t *testing.T) {
-	original, err := character.Create(character.CreateInput{Seed: ptrInt64(111)})
+	creator := newTestCreator()
+	original, err := creator.Create(context.Background(), character.CreateInput{Seed: ptrInt64(111)})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 
-	// Try multiple seeds until we find one that produces a different name.
-	// (In theory a collision is possible but astronomically unlikely with our data set.)
 	changed := false
 	for seed := int64(9999); seed < 10100; seed++ {
-		regen, err := character.Regenerate(character.RegenerateInput{
+		regen, err := creator.Regenerate(context.Background(), character.RegenerateInput{
 			Character: original,
 			Locks:     domain.CharacterLocks{Name: false},
 			Seed:      ptrInt64(seed),
@@ -270,12 +333,13 @@ func TestRegenerate_NameUnlocked_NameChanges(t *testing.T) {
 // --- Test: stats locked → stats unchanged on Regenerate ---
 
 func TestRegenerate_StatsLocked_StatsUnchanged(t *testing.T) {
-	original, err := character.Create(character.CreateInput{Seed: ptrInt64(200)})
+	creator := newTestCreator()
+	original, err := creator.Create(context.Background(), character.CreateInput{Seed: ptrInt64(200)})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 
-	regen, err := character.Regenerate(character.RegenerateInput{
+	regen, err := creator.Regenerate(context.Background(), character.RegenerateInput{
 		Character: original,
 		Locks:     domain.CharacterLocks{Stats: true},
 		Seed:      ptrInt64(300),
@@ -300,15 +364,15 @@ func TestRegenerate_StatsLocked_StatsUnchanged(t *testing.T) {
 // --- Test: narrative blocks locked individually ---
 
 func TestRegenerate_BackgroundLocked_OnlyBackgroundUnchanged(t *testing.T) {
-	original, err := character.Create(character.CreateInput{Seed: ptrInt64(500)})
+	creator := newTestCreator()
+	original, err := creator.Create(context.Background(), character.CreateInput{Seed: ptrInt64(500)})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 
-	// Try multiple seeds until motivation or secret differ, confirming they regenerate.
 	regenerated := false
 	for seed := int64(8000); seed < 8100; seed++ {
-		regen, err := character.Regenerate(character.RegenerateInput{
+		regen, err := creator.Regenerate(context.Background(), character.RegenerateInput{
 			Character: original,
 			Locks: domain.CharacterLocks{
 				Background: true,
@@ -320,12 +384,10 @@ func TestRegenerate_BackgroundLocked_OnlyBackgroundUnchanged(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Regenerate seed %d: %v", seed, err)
 		}
-		// Background MUST be unchanged.
 		if regen.Background.Content != original.Background.Content {
 			t.Errorf("Background changed but was locked: got %q, want %q",
 				regen.Background.Content, original.Background.Content)
 		}
-		// At least one of motivation/secret should differ eventually.
 		if regen.Motivation.Content != original.Motivation.Content ||
 			regen.Secret.Content != original.Secret.Content {
 			regenerated = true
@@ -340,7 +402,8 @@ func TestRegenerate_BackgroundLocked_OnlyBackgroundUnchanged(t *testing.T) {
 // --- Test: character has non-empty ID ---
 
 func TestCreate_CharacterHasNonEmptyID(t *testing.T) {
-	out, err := character.Create(character.CreateInput{})
+	creator := newTestCreator()
+	out, err := creator.Create(context.Background(), character.CreateInput{})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -352,7 +415,8 @@ func TestCreate_CharacterHasNonEmptyID(t *testing.T) {
 // --- Test: character has non-zero timestamps ---
 
 func TestCreate_CharacterHasTimestamps(t *testing.T) {
-	out, err := character.Create(character.CreateInput{})
+	creator := newTestCreator()
+	out, err := creator.Create(context.Background(), character.CreateInput{})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -367,7 +431,8 @@ func TestCreate_CharacterHasTimestamps(t *testing.T) {
 // --- Test: Locks field is all-false on Create ---
 
 func TestCreate_LocksAllFalseOnCreation(t *testing.T) {
-	out, err := character.Create(character.CreateInput{})
+	creator := newTestCreator()
+	out, err := creator.Create(context.Background(), character.CreateInput{})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -379,8 +444,9 @@ func TestCreate_LocksAllFalseOnCreation(t *testing.T) {
 // --- Test: provided gender produces coherent name ---
 
 func TestCreate_ProvidedGender_CoherentName(t *testing.T) {
+	creator := newTestCreator()
 	gender := namegen.GenderFemale
-	out, err := character.Create(character.CreateInput{
+	out, err := creator.Create(context.Background(), character.CreateInput{
 		Gender: &gender,
 		Seed:   ptrInt64(77),
 	})

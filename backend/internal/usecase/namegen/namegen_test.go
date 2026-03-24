@@ -1,13 +1,71 @@
 package namegen_test
 
 import (
+	"context"
+	"fmt"
 	"testing"
 
 	"forge-rpg/internal/domain"
+	"forge-rpg/internal/domain/ports"
 	"forge-rpg/internal/usecase/namegen"
 )
 
 func ptr[T any](v T) *T { return &v }
+
+// ---------------------------------------------------------------------------
+// fakeNameRepo — in-memory stub satisfying ports.NameRepository
+// ---------------------------------------------------------------------------
+
+type fakeNameRepo struct {
+	data map[string]map[string][]string // species_key → gender → names
+}
+
+func (f *fakeNameRepo) FindBySpeciesGender(ctx context.Context, speciesKey, gender string) ([]string, error) {
+	if genderMap, ok := f.data[speciesKey]; ok {
+		if names, ok := genderMap[gender]; ok {
+			return names, nil
+		}
+	}
+	return nil, nil // empty → callers handle the empty case
+}
+
+func (f *fakeNameRepo) Count(ctx context.Context) (int, error) {
+	total := 0
+	for _, gMap := range f.data {
+		for _, names := range gMap {
+			total += len(names)
+		}
+	}
+	return total, nil
+}
+
+// defaultFakeNameRepo returns a repo with 25 male and 25 female names for
+// every species key used in tests, so all normal paths succeed.
+func defaultFakeNameRepo() *fakeNameRepo {
+	make25 := func(prefix string) []string {
+		names := make([]string, 25)
+		for i := range names {
+			names[i] = fmt.Sprintf("%s-%02d", prefix, i+1)
+		}
+		return names
+	}
+
+	keys := []string{
+		"human", "high-elf", "wood-elf", "drow",
+		"hill-dwarf", "mountain-dwarf",
+		"lightfoot", "stout",
+		"forest-gnome", "rock-gnome",
+		"half-elf", "half-orc", "tiefling", "dragonborn",
+	}
+	data := make(map[string]map[string][]string, len(keys))
+	for _, k := range keys {
+		data[k] = map[string][]string{
+			"male":   make25(k + "-m"),
+			"female": make25(k + "-f"),
+		}
+	}
+	return &fakeNameRepo{data: data}
+}
 
 // --- 1. Valid name returned for each of the 9 species ---
 
@@ -37,7 +95,8 @@ func TestGenerate_ValidNamePerSpecies(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			out, err := namegen.Generate(namegen.Input{
+			svc := namegen.New(defaultFakeNameRepo())
+			out, err := svc.Generate(context.Background(), namegen.Input{
 				Species:    tc.species,
 				SubSpecies: tc.sub,
 				Seed:       &seed,
@@ -56,14 +115,15 @@ func TestGenerate_ValidNamePerSpecies(t *testing.T) {
 
 func TestGenerate_Reproducibility(t *testing.T) {
 	seed := int64(12345)
+	svc := namegen.New(defaultFakeNameRepo())
 	in := namegen.Input{
 		Species: domain.SpeciesHuman,
 		Gender:  ptr(namegen.GenderMale),
 		Seed:    &seed,
 	}
 
-	out1, err1 := namegen.Generate(in)
-	out2, err2 := namegen.Generate(in)
+	out1, err1 := svc.Generate(context.Background(), in)
+	out2, err2 := svc.Generate(context.Background(), in)
 
 	if err1 != nil || err2 != nil {
 		t.Fatalf("unexpected errors: %v / %v", err1, err2)
@@ -79,11 +139,12 @@ func TestGenerate_Reproducibility(t *testing.T) {
 // --- 3. Different seeds may produce different names ---
 
 func TestGenerate_DifferentSeeds_MayDiffer(t *testing.T) {
-	// Use human which has 25+ names per gender — very likely to differ across seeds
+	// Use 25 names per gender — very likely to differ across seeds
 	seedA := int64(1)
 	seedB := int64(999)
+	svc := namegen.New(defaultFakeNameRepo())
 
-	outA, err := namegen.Generate(namegen.Input{
+	outA, err := svc.Generate(context.Background(), namegen.Input{
 		Species: domain.SpeciesHuman,
 		Gender:  ptr(namegen.GenderMale),
 		Seed:    &seedA,
@@ -92,7 +153,7 @@ func TestGenerate_DifferentSeeds_MayDiffer(t *testing.T) {
 		t.Fatalf("seed A error: %v", err)
 	}
 
-	outB, err := namegen.Generate(namegen.Input{
+	outB, err := svc.Generate(context.Background(), namegen.Input{
 		Species: domain.SpeciesHuman,
 		Gender:  ptr(namegen.GenderMale),
 		Seed:    &seedB,
@@ -101,8 +162,6 @@ func TestGenerate_DifferentSeeds_MayDiffer(t *testing.T) {
 		t.Fatalf("seed B error: %v", err)
 	}
 
-	// Not a hard failure if they happen to be the same (pool is finite),
-	// but with 25 names this is a ~1/25 chance — log a warning only.
 	if outA.Name == outB.Name {
 		t.Logf("WARNING: seeds %d and %d produced the same name %q — possible but unlikely", seedA, seedB, outA.Name)
 	}
@@ -111,7 +170,8 @@ func TestGenerate_DifferentSeeds_MayDiffer(t *testing.T) {
 // --- 4. Nil seed generates a random (non-empty) name ---
 
 func TestGenerate_NilSeed_ReturnsValidName(t *testing.T) {
-	out, err := namegen.Generate(namegen.Input{
+	svc := namegen.New(defaultFakeNameRepo())
+	out, err := svc.Generate(context.Background(), namegen.Input{
 		Species: domain.SpeciesHuman,
 		Gender:  ptr(namegen.GenderFemale),
 		Seed:    nil,
@@ -143,7 +203,8 @@ func TestGenerate_GenderResolution(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			out, err := namegen.Generate(namegen.Input{
+			svc := namegen.New(defaultFakeNameRepo())
+			out, err := svc.Generate(context.Background(), namegen.Input{
 				Species: domain.SpeciesHuman,
 				Gender:  tc.gender,
 				Seed:    &seed,
@@ -174,8 +235,9 @@ func TestGenerate_SubSpeciesRespected(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			svc := namegen.New(defaultFakeNameRepo())
 			sub := tc.sub
-			out, err := namegen.Generate(namegen.Input{
+			out, err := svc.Generate(context.Background(), namegen.Input{
 				Species:    domain.SpeciesElf,
 				SubSpecies: &sub,
 				Gender:     ptr(namegen.GenderMale),
@@ -197,8 +259,8 @@ func TestGenerate_ClassHasNoEffect(t *testing.T) {
 	seed := int64(42)
 	gender := ptr(namegen.GenderMale)
 
-	// Generate a baseline without class
-	baseline, err := namegen.Generate(namegen.Input{
+	svc := namegen.New(defaultFakeNameRepo())
+	baseline, err := svc.Generate(context.Background(), namegen.Input{
 		Species: domain.SpeciesHuman,
 		Gender:  gender,
 		Seed:    &seed,
@@ -216,9 +278,7 @@ func TestGenerate_ClassHasNoEffect(t *testing.T) {
 
 	for _, cls := range classes {
 		t.Run(string(cls), func(t *testing.T) {
-			// Input has no Class field — name generation is species-only.
-			// We verify the result is identical to baseline (class is irrelevant).
-			out, err := namegen.Generate(namegen.Input{
+			out, err := svc.Generate(context.Background(), namegen.Input{
 				Species: domain.SpeciesHuman,
 				Gender:  gender,
 				Seed:    &seed,
@@ -237,7 +297,8 @@ func TestGenerate_ClassHasNoEffect(t *testing.T) {
 
 func TestGenerate_UnknownSpecies_ReturnsError(t *testing.T) {
 	seed := int64(1)
-	_, err := namegen.Generate(namegen.Input{
+	svc := namegen.New(defaultFakeNameRepo())
+	_, err := svc.Generate(context.Background(), namegen.Input{
 		Species: domain.Species("unknown-alien"),
 		Seed:    &seed,
 	})
@@ -245,3 +306,7 @@ func TestGenerate_UnknownSpecies_ReturnsError(t *testing.T) {
 		t.Fatal("expected error for unknown species, got nil")
 	}
 }
+
+// --- 9. Verify interface is satisfied at compile time ---
+
+var _ ports.NameRepository = (*fakeNameRepo)(nil)

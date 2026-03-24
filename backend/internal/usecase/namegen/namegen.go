@@ -1,11 +1,13 @@
 package namegen
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"time"
 
 	"forge-rpg/internal/domain"
+	"forge-rpg/internal/domain/ports"
 )
 
 // Gender of the generated character name.
@@ -31,15 +33,26 @@ type Output struct {
 	Seed int64 // the seed used — allows reproduction of the same result
 }
 
+// Service generates character names using a NameRepository for content.
+// Inject it via New — the repo is queried on every Generate call.
+type Service struct {
+	repo ports.NameRepository
+}
+
+// New constructs a Service with the given repository.
+func New(repo ports.NameRepository) *Service {
+	return &Service{repo: repo}
+}
+
 // Generate produces a character name based on the input parameters.
 // Same Seed + same Input always returns the same Output.Name.
-func Generate(in Input) (Output, error) {
+func (s *Service) Generate(ctx context.Context, in Input) (Output, error) {
 	seed := resolveSeed(in.Seed)
 	rng := rand.New(rand.NewSource(seed))
 
 	gender := resolveGender(in.Gender, rng)
 
-	names, err := namesFor(in.Species, in.SubSpecies, gender, rng)
+	names, err := s.namesFor(ctx, in.Species, in.SubSpecies, gender, rng)
 	if err != nil {
 		return Output{}, err
 	}
@@ -50,6 +63,24 @@ func Generate(in Input) (Output, error) {
 
 	name := names[rng.Intn(len(names))]
 	return Output{Name: name, Seed: seed}, nil
+}
+
+func (s *Service) namesFor(
+	ctx     context.Context,
+	species domain.Species,
+	sub     *domain.SubSpecies,
+	gender  Gender,
+	rng     *rand.Rand,
+) ([]string, error) {
+	key := speciesKey(species, sub, rng)
+	names, err := s.repo.FindBySpeciesGender(ctx, key, string(gender))
+	if err != nil {
+		return nil, err
+	}
+	if len(names) == 0 {
+		return nil, fmt.Errorf("namegen: unknown species key %q", key)
+	}
+	return names, nil
 }
 
 func resolveSeed(s *int64) int64 {
@@ -67,22 +98,6 @@ func resolveGender(g *Gender, rng *rand.Rand) Gender {
 		return GenderMale
 	}
 	return GenderFemale
-}
-
-func namesFor(species domain.Species, sub *domain.SubSpecies, gender Gender, rng *rand.Rand) ([]string, error) {
-	key := speciesKey(species, sub, rng)
-	pool, ok := nameData[key]
-	if !ok {
-		return nil, fmt.Errorf("namegen: unknown species key %q", key)
-	}
-	switch gender {
-	case GenderMale:
-		return pool.male, nil
-	case GenderFemale:
-		return pool.female, nil
-	default:
-		return nil, fmt.Errorf("namegen: unknown gender %q", gender)
-	}
 }
 
 // speciesKey resolves which data key to use.

@@ -56,7 +56,7 @@ func (r *mutationResolver) Logout(ctx context.Context) (bool, error) {
 // Does NOT require authentication — generation is stateless and available to anyone.
 func (r *mutationResolver) GenerateCharacter(ctx context.Context, input *model.GenerateCharacterInput) (*model.Character, error) {
 	ci := inputToCreateInput(input, nil)
-	c, err := character.Create(ci)
+	c, err := r.creator.Create(ctx, ci)
 	if err != nil {
 		return nil, fmt.Errorf("generateCharacter: %w", err)
 	}
@@ -90,7 +90,7 @@ func (r *mutationResolver) RegenerateCharacter(ctx context.Context, id string, l
 		seedPtr = &s
 	}
 
-	updated, err := character.Regenerate(character.RegenerateInput{
+	updated, err := r.creator.Regenerate(ctx, character.RegenerateInput{
 		Character: existing,
 		Locks:     domainLocks,
 		Seed:      seedPtr,
@@ -202,7 +202,7 @@ func (r *mutationResolver) RegenerateDraft(ctx context.Context, current model.Cu
 		seedPtr = &s
 	}
 
-	result, err := character.Regenerate(character.RegenerateInput{
+	result, err := r.creator.Regenerate(ctx, character.RegenerateInput{
 		Character: draft,
 		Locks:     domainLocks,
 		Seed:      seedPtr,
@@ -226,7 +226,7 @@ func (r *mutationResolver) SaveCharacter(ctx context.Context, input model.Genera
 	s := int64(seed)
 	ci := inputToCreateInput(&input, &s)
 
-	c, err := character.Create(ci)
+	c, err := r.creator.Create(ctx, ci)
 	if err != nil {
 		return nil, fmt.Errorf("saveCharacter: generate: %w", err)
 	}

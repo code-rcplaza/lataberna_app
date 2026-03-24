@@ -69,6 +69,36 @@ func migrate(db *sql.DB) error {
 			created_at          TEXT NOT NULL,
 			updated_at          TEXT NOT NULL
 		);
+
+		CREATE TABLE IF NOT EXISTS narrative_entries (
+			id         TEXT PRIMARY KEY,
+			category   TEXT NOT NULL CHECK(category IN ('background','motivation','secret')),
+			content    TEXT NOT NULL,
+			created_at TEXT NOT NULL
+		);
+
+		CREATE TABLE IF NOT EXISTS narrative_compatibility (
+			entry_id   TEXT NOT NULL REFERENCES narrative_entries(id) ON DELETE CASCADE,
+			dimension  TEXT NOT NULL CHECK(dimension IN ('class','species')),
+			value      TEXT NOT NULL,
+			group_name TEXT NOT NULL CHECK(group_name IN ('primary','secondary','excluded')),
+			PRIMARY KEY (entry_id, dimension, value)
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_narrative_compat
+			ON narrative_compatibility(dimension, value, group_name);
+
+		CREATE TABLE IF NOT EXISTS name_entries (
+			id          TEXT PRIMARY KEY,
+			species_key TEXT NOT NULL,
+			gender      TEXT NOT NULL CHECK(gender IN ('male','female')),
+			name        TEXT NOT NULL,
+			created_at  TEXT NOT NULL,
+			UNIQUE(species_key, gender, name)
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_name_entries
+			ON name_entries(species_key, gender);
 	`)
 	return err
 }
