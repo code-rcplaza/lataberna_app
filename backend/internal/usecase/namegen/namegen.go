@@ -51,36 +51,148 @@ func (s *Service) Generate(ctx context.Context, in Input) (Output, error) {
 	rng := rand.New(rand.NewSource(seed))
 
 	gender := resolveGender(in.Gender, rng)
+	key := speciesKey(in.Species, in.SubSpecies, rng)
 
-	names, err := s.namesFor(ctx, in.Species, in.SubSpecies, gender, rng)
+	name, err := s.compose(ctx, key, string(gender), rng)
 	if err != nil {
 		return Output{}, err
 	}
-
-	if len(names) == 0 {
-		return Output{}, fmt.Errorf("namegen: no names found for species %q gender %q", in.Species, gender)
-	}
-
-	name := names[rng.Intn(len(names))]
 	return Output{Name: name, Seed: seed}, nil
 }
 
-func (s *Service) namesFor(
-	ctx     context.Context,
-	species domain.Species,
-	sub     *domain.SubSpecies,
-	gender  Gender,
-	rng     *rand.Rand,
-) ([]string, error) {
-	key := speciesKey(species, sub, rng)
-	names, err := s.repo.FindBySpeciesGender(ctx, key, string(gender))
+// compose assembles a species-appropriate name from component pools.
+// The speciesKey determines which pools and assembly rule to use.
+func (s *Service) compose(ctx context.Context, key, gender string, rng *rand.Rand) (string, error) {
+	switch key {
+	case "human":
+		first, err := s.pick(ctx, key, gender, "first_name", rng)
+		if err != nil {
+			return "", err
+		}
+		surname, err := s.pick(ctx, key, "any", "surname", rng)
+		if err != nil {
+			return "", err
+		}
+		return first + " " + surname, nil
+
+	case "hill-dwarf", "mountain-dwarf":
+		first, err := s.pick(ctx, key, gender, "first_name", rng)
+		if err != nil {
+			return "", err
+		}
+		clan, err := s.pick(ctx, key, "any", "clan_name", rng)
+		if err != nil {
+			return "", err
+		}
+		return first + " " + clan, nil
+
+	case "high-elf", "wood-elf", "drow":
+		first, err := s.pick(ctx, key, gender, "first_name", rng)
+		if err != nil {
+			return "", err
+		}
+		family, err := s.pick(ctx, key, "any", "family_name", rng)
+		if err != nil {
+			return "", err
+		}
+		return first + " " + family, nil
+
+	case "lightfoot", "stout":
+		first, err := s.pick(ctx, key, gender, "first_name", rng)
+		if err != nil {
+			return "", err
+		}
+		surname, err := s.pick(ctx, key, "any", "surname", rng)
+		if err != nil {
+			return "", err
+		}
+		return first + " " + surname, nil
+
+	case "dragonborn":
+		// Clan name precedes first name — hard invariant.
+		clan, err := s.pick(ctx, key, "any", "clan_name", rng)
+		if err != nil {
+			return "", err
+		}
+		first, err := s.pick(ctx, key, gender, "first_name", rng)
+		if err != nil {
+			return "", err
+		}
+		return clan + " " + first, nil
+
+	case "forest-gnome", "rock-gnome":
+		first, err := s.pick(ctx, key, gender, "first_name", rng)
+		if err != nil {
+			return "", err
+		}
+		clan, err := s.pick(ctx, key, "any", "clan_name", rng)
+		if err != nil {
+			return "", err
+		}
+		nick, err := s.pick(ctx, key, "any", "nickname", rng)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf(`%s %s "%s"`, first, clan, nick), nil
+
+	case "half-elf":
+		first, err := s.pick(ctx, key, gender, "first_name", rng)
+		if err != nil {
+			return "", err
+		}
+		// Randomly adopts human (surname) or elven (family_name) convention.
+		nameType := "surname"
+		if rng.Intn(2) != 0 {
+			nameType = "family_name"
+		}
+		second, err := s.pick(ctx, key, "any", nameType, rng)
+		if err != nil {
+			return "", err
+		}
+		return first + " " + second, nil
+
+	case "half-orc":
+		first, err := s.pick(ctx, key, gender, "first_name", rng)
+		if err != nil {
+			return "", err
+		}
+		// ~30% chance of also having a surname.
+		if rng.Intn(10) < 3 {
+			surname, err := s.pick(ctx, key, "any", "surname", rng)
+			if err != nil {
+				return "", err
+			}
+			return first + " " + surname, nil
+		}
+		return first, nil
+
+	case string(domain.SubSpeciesInfernalTiefling):
+		return s.pick(ctx, key, "any", "infernal_name", rng)
+
+	case string(domain.SubSpeciesVirtueTiefling):
+		return s.pick(ctx, key, "any", "virtue_word", rng)
+
+	default:
+		return "", fmt.Errorf("namegen.compose: unknown species key %q", key)
+	}
+}
+
+// pick fetches a pool via FindByType and returns one random entry.
+func (s *Service) pick(ctx context.Context, speciesKey, gender, nameType string, rng *rand.Rand) (string, error) {
+	pool, err := s.repo.FindByType(ctx, speciesKey, gender, nameType)
 	if err != nil {
-		return nil, err
+		return "", fmt.Errorf("namegen.compose: %w", err)
 	}
-	if len(names) == 0 {
-		return nil, fmt.Errorf("namegen: unknown species key %q", key)
+	return pickOne(pool, rng)
+}
+
+// pickOne returns a uniformly random element from pool.
+// Returns an error wrapping ports.ErrEmptyNamePool if pool is empty.
+func pickOne(pool []string, rng *rand.Rand) (string, error) {
+	if len(pool) == 0 {
+		return "", fmt.Errorf("pickOne: %w", ports.ErrEmptyNamePool)
 	}
-	return names, nil
+	return pool[rng.Intn(len(pool))], nil
 }
 
 func resolveSeed(s *int64) int64 {
@@ -107,9 +219,14 @@ func speciesKey(species domain.Species, sub *domain.SubSpecies, rng *rand.Rand) 
 		return string(*sub)
 	}
 	switch species {
-	case domain.SpeciesHuman, domain.SpeciesHalfElf, domain.SpeciesHalfOrc,
-		domain.SpeciesTiefling, domain.SpeciesDragonborn:
+	case domain.SpeciesHuman, domain.SpeciesHalfElf, domain.SpeciesHalfOrc, domain.SpeciesDragonborn:
 		return string(species)
+	case domain.SpeciesTiefling:
+		// Randomly selects infernal or virtue naming tradition.
+		if rng.Intn(2) == 0 {
+			return string(domain.SubSpeciesInfernalTiefling)
+		}
+		return string(domain.SubSpeciesVirtueTiefling)
 	case domain.SpeciesElf:
 		subs := []string{string(domain.SubSpeciesHighElf), string(domain.SubSpeciesWoodElf), string(domain.SubSpeciesDrow)}
 		return subs[rng.Intn(len(subs))]

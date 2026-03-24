@@ -2,7 +2,9 @@ package namegen_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"forge-rpg/internal/domain"
@@ -16,31 +18,45 @@ func ptr[T any](v T) *T { return &v }
 // fakeNameRepo — in-memory stub satisfying ports.NameRepository
 // ---------------------------------------------------------------------------
 
+// fakeNameRepo uses a 3-level map: speciesKey → nameType → gender → names.
 type fakeNameRepo struct {
-	data map[string]map[string][]string // species_key → gender → names
+	data map[string]map[string]map[string][]string
+}
+
+func (f *fakeNameRepo) FindByType(ctx context.Context, speciesKey, gender, nameType string) ([]string, error) {
+	if typeMap, ok := f.data[speciesKey]; ok {
+		if genderMap, ok := typeMap[nameType]; ok {
+			if names, ok := genderMap[gender]; ok && len(names) > 0 {
+				return names, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("fakeNameRepo: species=%q gender=%q type=%q: %w",
+		speciesKey, gender, nameType, ports.ErrEmptyNamePool)
 }
 
 func (f *fakeNameRepo) FindBySpeciesGender(ctx context.Context, speciesKey, gender string) ([]string, error) {
-	if genderMap, ok := f.data[speciesKey]; ok {
-		if names, ok := genderMap[gender]; ok {
-			return names, nil
-		}
+	names, err := f.FindByType(ctx, speciesKey, gender, "first_name")
+	if errors.Is(err, ports.ErrEmptyNamePool) {
+		return nil, nil
 	}
-	return nil, nil // empty → callers handle the empty case
+	return names, err
 }
 
 func (f *fakeNameRepo) Count(ctx context.Context) (int, error) {
 	total := 0
-	for _, gMap := range f.data {
-		for _, names := range gMap {
-			total += len(names)
+	for _, typeMap := range f.data {
+		for _, genderMap := range typeMap {
+			for _, names := range genderMap {
+				total += len(names)
+			}
 		}
 	}
 	return total, nil
 }
 
-// defaultFakeNameRepo returns a repo with 25 male and 25 female names for
-// every species key used in tests, so all normal paths succeed.
+// defaultFakeNameRepo returns a repo populated with pools for all species and
+// all component types required by compose().
 func defaultFakeNameRepo() *fakeNameRepo {
 	make25 := func(prefix string) []string {
 		names := make([]string, 25)
@@ -50,21 +66,71 @@ func defaultFakeNameRepo() *fakeNameRepo {
 		return names
 	}
 
-	keys := []string{
-		"human", "high-elf", "wood-elf", "drow",
-		"hill-dwarf", "mountain-dwarf",
-		"lightfoot", "stout",
-		"forest-gnome", "rock-gnome",
-		"half-elf", "half-orc", "tiefling", "dragonborn",
+	return &fakeNameRepo{
+		data: map[string]map[string]map[string][]string{
+			"human": {
+				"first_name": {"male": make25("hum-m"), "female": make25("hum-f")},
+				"surname":    {"any": make25("hum-sn")},
+			},
+			"high-elf": {
+				"first_name":  {"male": make25("helf-m"), "female": make25("helf-f")},
+				"family_name": {"any": make25("helf-fam")},
+			},
+			"wood-elf": {
+				"first_name":  {"male": make25("welf-m"), "female": make25("welf-f")},
+				"family_name": {"any": make25("welf-fam")},
+			},
+			"drow": {
+				"first_name":  {"male": make25("drow-m"), "female": make25("drow-f")},
+				"family_name": {"any": make25("drow-fam")},
+			},
+			"hill-dwarf": {
+				"first_name": {"male": make25("hdw-m"), "female": make25("hdw-f")},
+				"clan_name":  {"any": make25("hdw-clan")},
+			},
+			"mountain-dwarf": {
+				"first_name": {"male": make25("mdw-m"), "female": make25("mdw-f")},
+				"clan_name":  {"any": make25("mdw-clan")},
+			},
+			"lightfoot": {
+				"first_name": {"male": make25("lf-m"), "female": make25("lf-f")},
+				"surname":    {"any": make25("lf-sn")},
+			},
+			"stout": {
+				"first_name": {"male": make25("st-m"), "female": make25("st-f")},
+				"surname":    {"any": make25("st-sn")},
+			},
+			"forest-gnome": {
+				"first_name": {"male": make25("fg-m"), "female": make25("fg-f")},
+				"clan_name":  {"any": make25("fg-clan")},
+				"nickname":   {"any": make25("fg-nick")},
+			},
+			"rock-gnome": {
+				"first_name": {"male": make25("rg-m"), "female": make25("rg-f")},
+				"clan_name":  {"any": make25("rg-clan")},
+				"nickname":   {"any": make25("rg-nick")},
+			},
+			"half-elf": {
+				"first_name":  {"male": make25("he-m"), "female": make25("he-f")},
+				"surname":     {"any": make25("he-sn")},
+				"family_name": {"any": make25("he-fam")},
+			},
+			"half-orc": {
+				"first_name": {"male": make25("ho-m"), "female": make25("ho-f")},
+				"surname":    {"any": make25("ho-sn")},
+			},
+			"tiefling-infernal": {
+				"infernal_name": {"any": make25("tief-inf")},
+			},
+			"tiefling-virtue": {
+				"virtue_word": {"any": make25("tief-vir")},
+			},
+			"dragonborn": {
+				"first_name": {"male": make25("db-m"), "female": make25("db-f")},
+				"clan_name":  {"any": make25("db-clan")},
+			},
+		},
 	}
-	data := make(map[string]map[string][]string, len(keys))
-	for _, k := range keys {
-		data[k] = map[string][]string{
-			"male":   make25(k + "-m"),
-			"female": make25(k + "-f"),
-		}
-	}
-	return &fakeNameRepo{data: data}
 }
 
 // --- 1. Valid name returned for each of the 9 species ---
@@ -88,6 +154,8 @@ func TestGenerate_ValidNamePerSpecies(t *testing.T) {
 		{"half-elf", domain.SpeciesHalfElf, nil},
 		{"half-orc", domain.SpeciesHalfOrc, nil},
 		{"tiefling", domain.SpeciesTiefling, nil},
+		{"tiefling-infernal", domain.SpeciesTiefling, ptr(domain.SubSpeciesInfernalTiefling)},
+		{"tiefling-virtue", domain.SpeciesTiefling, ptr(domain.SubSpeciesVirtueTiefling)},
 		{"dragonborn", domain.SpeciesDragonborn, nil},
 	}
 
@@ -139,7 +207,6 @@ func TestGenerate_Reproducibility(t *testing.T) {
 // --- 3. Different seeds may produce different names ---
 
 func TestGenerate_DifferentSeeds_MayDiffer(t *testing.T) {
-	// Use 25 names per gender — very likely to differ across seeds
 	seedA := int64(1)
 	seedB := int64(999)
 	svc := namegen.New(defaultFakeNameRepo())
@@ -304,6 +371,260 @@ func TestGenerate_UnknownSpecies_ReturnsError(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected error for unknown species, got nil")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Composition rules (TDD — Phase 5 tasks 5.1-5.6)
+// ---------------------------------------------------------------------------
+
+// Task 5.1 — Human: output is <word> <word>, both tokens non-empty.
+func TestCompose_Human(t *testing.T) {
+	seed := int64(42)
+	svc := namegen.New(defaultFakeNameRepo())
+	out, err := svc.Generate(context.Background(), namegen.Input{
+		Species: domain.SpeciesHuman,
+		Gender:  ptr(namegen.GenderMale),
+		Seed:    &seed,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	tokens := strings.Fields(out.Name)
+	if len(tokens) != 2 {
+		t.Fatalf("expected 2 tokens for Human, got %d: %q", len(tokens), out.Name)
+	}
+	if tokens[0] == "" || tokens[1] == "" {
+		t.Fatalf("expected non-empty tokens, got %q", out.Name)
+	}
+}
+
+// Task 5.2 — Dragonborn: clan name is the FIRST token.
+func TestCompose_Dragonborn(t *testing.T) {
+	clanPool := []string{}
+	for i := 1; i <= 25; i++ {
+		clanPool = append(clanPool, fmt.Sprintf("db-clan-%02d", i))
+	}
+
+	// Run 20 fixed-seed iterations to assert clan-first is always true.
+	for seedVal := int64(0); seedVal < 20; seedVal++ {
+		svc := namegen.New(defaultFakeNameRepo())
+		out, err := svc.Generate(context.Background(), namegen.Input{
+			Species: domain.SpeciesDragonborn,
+			Gender:  ptr(namegen.GenderMale),
+			Seed:    &seedVal,
+		})
+		if err != nil {
+			t.Fatalf("seed %d: unexpected error: %v", seedVal, err)
+		}
+		tokens := strings.Fields(out.Name)
+		if len(tokens) != 2 {
+			t.Fatalf("seed %d: expected 2 tokens, got %d: %q", seedVal, len(tokens), out.Name)
+		}
+		// First token must be from the clan pool (prefix "db-clan-").
+		if !strings.HasPrefix(tokens[0], "db-clan-") {
+			t.Errorf("seed %d: first token %q is not a clan name (expected prefix db-clan-)", seedVal, tokens[0])
+		}
+	}
+}
+
+// Task 5.3 — Gnome: nickname is wrapped in double quotes.
+func TestCompose_Gnome(t *testing.T) {
+	seed := int64(42)
+	svc := namegen.New(defaultFakeNameRepo())
+	out, err := svc.Generate(context.Background(), namegen.Input{
+		Species:    domain.SpeciesGnome,
+		SubSpecies: ptr(domain.SubSpeciesForestGnome),
+		Gender:     ptr(namegen.GenderMale),
+		Seed:       &seed,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Output format: first clan "nickname"
+	if !strings.Contains(out.Name, `"`) {
+		t.Fatalf("Gnome name %q does not contain double-quoted nickname", out.Name)
+	}
+	// Verify structure: three whitespace-separated tokens where last is "nick-XX"
+	parts := strings.Fields(out.Name)
+	if len(parts) != 3 {
+		t.Fatalf("expected 3 parts for Gnome name, got %d: %q", len(parts), out.Name)
+	}
+	if !strings.HasPrefix(parts[2], `"`) || !strings.HasSuffix(parts[2], `"`) {
+		t.Errorf("third token %q should be wrapped in double quotes", parts[2])
+	}
+}
+
+// Task 5.4 — Tiefling: infernal key never returns virtue word; virtue key never returns infernal name.
+func TestCompose_Tiefling(t *testing.T) {
+	t.Run("infernal key returns infernal name only", func(t *testing.T) {
+		for seedVal := int64(0); seedVal < 20; seedVal++ {
+			svc := namegen.New(defaultFakeNameRepo())
+			sub := domain.SubSpeciesInfernalTiefling
+			out, err := svc.Generate(context.Background(), namegen.Input{
+				Species:    domain.SpeciesTiefling,
+				SubSpecies: &sub,
+				Seed:       &seedVal,
+			})
+			if err != nil {
+				t.Fatalf("seed %d: unexpected error: %v", seedVal, err)
+			}
+			// Pool prefix for infernal is "tief-inf-"
+			if !strings.HasPrefix(out.Name, "tief-inf-") {
+				t.Errorf("seed %d: infernal tiefling got non-infernal name %q", seedVal, out.Name)
+			}
+		}
+	})
+
+	t.Run("virtue key returns virtue word only", func(t *testing.T) {
+		for seedVal := int64(0); seedVal < 20; seedVal++ {
+			svc := namegen.New(defaultFakeNameRepo())
+			sub := domain.SubSpeciesVirtueTiefling
+			out, err := svc.Generate(context.Background(), namegen.Input{
+				Species:    domain.SpeciesTiefling,
+				SubSpecies: &sub,
+				Seed:       &seedVal,
+			})
+			if err != nil {
+				t.Fatalf("seed %d: unexpected error: %v", seedVal, err)
+			}
+			// Pool prefix for virtue is "tief-vir-"
+			if !strings.HasPrefix(out.Name, "tief-vir-") {
+				t.Errorf("seed %d: virtue tiefling got non-virtue name %q", seedVal, out.Name)
+			}
+		}
+	})
+}
+
+// Task 5.5 — Half-Orc probability: ~30% two-word, ~70% one-word over N=100 runs.
+func TestCompose_HalfOrc_Probability(t *testing.T) {
+	const N = 100
+	twoWordCount := 0
+
+	for seedVal := int64(0); seedVal < N; seedVal++ {
+		svc := namegen.New(defaultFakeNameRepo())
+		out, err := svc.Generate(context.Background(), namegen.Input{
+			Species: domain.SpeciesHalfOrc,
+			Gender:  ptr(namegen.GenderMale),
+			Seed:    &seedVal,
+		})
+		if err != nil {
+			t.Fatalf("seed %d: unexpected error: %v", seedVal, err)
+		}
+		if len(strings.Fields(out.Name)) == 2 {
+			twoWordCount++
+		}
+	}
+
+	// Expected ~30% ± 15pp tolerance (15-45 out of 100).
+	if twoWordCount < 15 || twoWordCount > 45 {
+		t.Errorf("Half-Orc two-word name rate: %d/100 (expected 15-45)", twoWordCount)
+	}
+}
+
+// Task 5.6 — Remaining species: correct assembly order.
+
+func TestCompose_Dwarf(t *testing.T) {
+	for _, sub := range []domain.SubSpecies{domain.SubSpeciesHillDwarf, domain.SubSpeciesMountainDwarf} {
+		t.Run(string(sub), func(t *testing.T) {
+			seed := int64(42)
+			svc := namegen.New(defaultFakeNameRepo())
+			out, err := svc.Generate(context.Background(), namegen.Input{
+				Species:    domain.SpeciesDwarf,
+				SubSpecies: &sub,
+				Gender:     ptr(namegen.GenderFemale),
+				Seed:       &seed,
+			})
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			tokens := strings.Fields(out.Name)
+			if len(tokens) != 2 {
+				t.Fatalf("expected 2 tokens for Dwarf, got %d: %q", len(tokens), out.Name)
+			}
+		})
+	}
+}
+
+func TestCompose_Elf(t *testing.T) {
+	for _, sub := range []domain.SubSpecies{domain.SubSpeciesHighElf, domain.SubSpeciesWoodElf, domain.SubSpeciesDrow} {
+		t.Run(string(sub), func(t *testing.T) {
+			seed := int64(42)
+			svc := namegen.New(defaultFakeNameRepo())
+			out, err := svc.Generate(context.Background(), namegen.Input{
+				Species:    domain.SpeciesElf,
+				SubSpecies: &sub,
+				Gender:     ptr(namegen.GenderFemale),
+				Seed:       &seed,
+			})
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			tokens := strings.Fields(out.Name)
+			if len(tokens) != 2 {
+				t.Fatalf("expected 2 tokens for Elf, got %d: %q", len(tokens), out.Name)
+			}
+		})
+	}
+}
+
+func TestCompose_Halfling(t *testing.T) {
+	for _, sub := range []domain.SubSpecies{domain.SubSpeciesLightfoot, domain.SubSpeciesStout} {
+		t.Run(string(sub), func(t *testing.T) {
+			seed := int64(42)
+			svc := namegen.New(defaultFakeNameRepo())
+			out, err := svc.Generate(context.Background(), namegen.Input{
+				Species:    domain.SpeciesHalfling,
+				SubSpecies: &sub,
+				Gender:     ptr(namegen.GenderFemale),
+				Seed:       &seed,
+			})
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			tokens := strings.Fields(out.Name)
+			if len(tokens) != 2 {
+				t.Fatalf("expected 2 tokens for Halfling, got %d: %q", len(tokens), out.Name)
+			}
+		})
+	}
+}
+
+func TestCompose_HalfElf_TwoTokens(t *testing.T) {
+	// Half-Elf always produces two tokens regardless of convention.
+	for seedVal := int64(0); seedVal < 20; seedVal++ {
+		svc := namegen.New(defaultFakeNameRepo())
+		out, err := svc.Generate(context.Background(), namegen.Input{
+			Species: domain.SpeciesHalfElf,
+			Gender:  ptr(namegen.GenderFemale),
+			Seed:    &seedVal,
+		})
+		if err != nil {
+			t.Fatalf("seed %d: unexpected error: %v", seedVal, err)
+		}
+		tokens := strings.Fields(out.Name)
+		if len(tokens) != 2 {
+			t.Errorf("seed %d: expected 2 tokens for Half-Elf, got %d: %q", seedVal, len(tokens), out.Name)
+		}
+	}
+}
+
+// Task 5.7 — Error on empty pool (tested via missing pool in repo).
+func TestGenerate_EmptyPool_ReturnsError(t *testing.T) {
+	// A repo with no pools at all.
+	emptyRepo := &fakeNameRepo{data: map[string]map[string]map[string][]string{}}
+	svc := namegen.New(emptyRepo)
+	seed := int64(1)
+	_, err := svc.Generate(context.Background(), namegen.Input{
+		Species: domain.SpeciesHuman,
+		Gender:  ptr(namegen.GenderMale),
+		Seed:    &seed,
+	})
+	if err == nil {
+		t.Fatal("expected error when pool is empty, got nil")
+	}
+	if !errors.Is(err, ports.ErrEmptyNamePool) {
+		t.Errorf("expected error to wrap ErrEmptyNamePool, got: %v", err)
 	}
 }
 

@@ -68,14 +68,17 @@ func (f *fakeNarrativeRepo) Count(ctx context.Context) (int, error) { return 15,
 type fakeNameRepo struct{}
 
 func (f *fakeNameRepo) FindBySpeciesGender(ctx context.Context, speciesKey, gender string) ([]string, error) {
-	names := []string{
+	return f.FindByType(ctx, speciesKey, gender, "first_name")
+}
+
+func (f *fakeNameRepo) FindByType(ctx context.Context, speciesKey, gender, nameType string) ([]string, error) {
+	return []string{
 		"Aldric", "Brennan", "Cael", "Dorian", "Edric",
 		"Faolan", "Gareth", "Hadwin", "Isidor", "Jareth",
 		"Kiran", "Leoric", "Maddox", "Nolan", "Orwin",
 		"Phelan", "Quinn", "Roderick", "Soren", "Theron",
 		"Ulric", "Vance", "Wulfric", "Xander", "Yorick",
-	}
-	return names, nil
+	}, nil
 }
 
 func (f *fakeNameRepo) Count(ctx context.Context) (int, error) { return 25, nil }
@@ -222,7 +225,6 @@ func TestCreate_AllClasses_GenerateWithoutError(t *testing.T) {
 		domain.ClassArtificer,
 	}
 	for _, class := range classes {
-		class := class
 		t.Run(string(class), func(t *testing.T) {
 			creator := newTestCreator()
 			out, err := creator.Create(context.Background(), character.CreateInput{Class: ptrClass(class)})

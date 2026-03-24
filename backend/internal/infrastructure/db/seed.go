@@ -27,7 +27,7 @@ func SeedContentIfEmpty(ctx context.Context, db *sql.DB) error {
 	if err := seedNarrativeIfEmpty(ctx, db); err != nil {
 		return fmt.Errorf("SeedContentIfEmpty: narrative: %w", err)
 	}
-	if err := seedNamesIfEmpty(ctx, db); err != nil {
+	if err := seedNamesByVersion(ctx, db); err != nil {
 		return fmt.Errorf("SeedContentIfEmpty: names: %w", err)
 	}
 	return nil
@@ -79,25 +79,40 @@ func seedNarrativeIfEmpty(ctx context.Context, db *sql.DB) error {
 	return tx.Commit()
 }
 
-func seedNamesIfEmpty(ctx context.Context, db *sql.DB) error {
-	var count int
-	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM name_entries`).Scan(&count); err != nil {
-		return fmt.Errorf("seedNamesIfEmpty: count: %w", err)
-	}
-	if count > 0 {
-		return nil
+// seedNamesByVersion seeds name_entries in phases based on seed_version.
+// Phase 1 (version < 1): first_name rows for all 9 species.
+// Phase 2 (version < 2): name component rows (surnames, clan names, etc.).
+// INSERT OR IGNORE makes each phase safe to retry.
+func seedNamesByVersion(ctx context.Context, db *sql.DB) error {
+	var version int
+	if err := db.QueryRowContext(ctx, `SELECT version FROM seed_version WHERE id = 1`).Scan(&version); err != nil {
+		return fmt.Errorf("seedNamesByVersion: read version: %w", err)
 	}
 
+	if version < 1 {
+		if err := seedNamesV1(ctx, db); err != nil {
+			return fmt.Errorf("seedNamesByVersion: v1: %w", err)
+		}
+	}
+	if version < 2 {
+		if err := seedNamesV2(ctx, db); err != nil {
+			return fmt.Errorf("seedNamesByVersion: v2: %w", err)
+		}
+	}
+	return nil
+}
+
+func seedNamesV1(ctx context.Context, db *sql.DB) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("seedNamesIfEmpty: begin: %w", err)
+		return fmt.Errorf("seedNamesV1: begin: %w", err)
 	}
 	defer tx.Rollback() //nolint:errcheck
 
 	stmt, err := tx.PrepareContext(ctx,
-		`INSERT OR IGNORE INTO name_entries (id, species_key, gender, name, created_at) VALUES (?, ?, ?, ?, ?)`)
+		`INSERT OR IGNORE INTO name_entries (id, species_key, gender, name_type, name, created_at) VALUES (?, ?, ?, 'first_name', ?, ?)`)
 	if err != nil {
-		return fmt.Errorf("seedNamesIfEmpty: prepare: %w", err)
+		return fmt.Errorf("seedNamesV1: prepare: %w", err)
 	}
 	defer stmt.Close()
 
@@ -109,13 +124,231 @@ func seedNamesIfEmpty(ctx context.Context, db *sql.DB) error {
 				idx++
 				id := fmt.Sprintf("name-%05d", idx)
 				if _, err := stmt.ExecContext(ctx, id, speciesKey, gender, name, now); err != nil {
-					return fmt.Errorf("seedNamesIfEmpty: insert name %q %q %q: %w", speciesKey, gender, name, err)
+					return fmt.Errorf("seedNamesV1: insert %q %q %q: %w", speciesKey, gender, name, err)
 				}
 			}
 		}
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	_, err = db.ExecContext(ctx, `UPDATE seed_version SET version = 1 WHERE id = 1`)
+	return err
+}
+
+func seedNamesV2(ctx context.Context, db *sql.DB) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("seedNamesV2: begin: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	stmt, err := tx.PrepareContext(ctx,
+		`INSERT OR IGNORE INTO name_entries (id, species_key, gender, name_type, name, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
+	if err != nil {
+		return fmt.Errorf("seedNamesV2: prepare: %w", err)
+	}
+	defer stmt.Close()
+
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+	idx := 0
+	// map[speciesKey]map[nameType]map[gender][]string
+	for speciesKey, typeMap := range nameSeedDataV2() {
+		for nameType, genderMap := range typeMap {
+			for gender, names := range genderMap {
+				for _, name := range names {
+					idx++
+					id := fmt.Sprintf("name-v2-%05d", idx)
+					if _, err := stmt.ExecContext(ctx, id, speciesKey, gender, nameType, name, now); err != nil {
+						return fmt.Errorf("seedNamesV2: insert %q %q %q %q: %w", speciesKey, nameType, gender, name, err)
+					}
+				}
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	_, err = db.ExecContext(ctx, `UPDATE seed_version SET version = 2 WHERE id = 1`)
+	return err
+}
+
+// nameSeedDataV2 returns component name pools (non-first_name types) for all species.
+// All component entries use gender='any'. Key structure: speciesKey → nameType → gender → names.
+func nameSeedDataV2() map[string]map[string]map[string][]string {
+	any := "any"
+	return map[string]map[string]map[string][]string{
+		// Human surnames
+		"human": {
+			"surname": {any: {
+				"Ashvale", "Brightwood", "Coldwater", "Dawnfall", "Emberstone",
+				"Fairwind", "Goldmere", "Hartwell", "Ironside", "Jarrow",
+				"Kestrel", "Longhill", "Morrow", "Nightfall", "Oakenhurst",
+				"Pendleton", "Redshore", "Silverbrook", "Thornwood", "Underwood",
+				"Vandermere", "Wellspring", "Whitmore", "Yarrow", "Zell",
+			}},
+		},
+		// Dwarf clan names
+		"hill-dwarf": {
+			"clan_name": {any: {
+				"Anvilhammer", "Bronzeshield", "Copperforge", "Deepdelve", "Earthmantle",
+				"Flintbeard", "Grimstone", "Hardbrew", "Ironbrow", "Keenedge",
+				"Stonecrag", "Stormhammer", "Deepvein", "Forgefire", "Granitefist",
+				"Hardhelm", "Ironveil", "Kettlehorn", "Moltensteel", "Rockmantle",
+				"Stoneback", "Strongarm", "Underforge", "Vaultbreaker", "Warmhearth",
+			}},
+		},
+		"mountain-dwarf": {
+			"clan_name": {any: {
+				"Axewall", "Boulderborn", "Cragmantle", "Deepfrost", "Embervault",
+				"Frostforge", "Goldvein", "Highpeak", "Ironmantle", "Keengranite",
+				"Stonewall", "Stormcrag", "Coldforge", "Deepcrown", "Frostborn",
+				"Gravelcrown", "Hardvault", "Icebrow", "Ironpeak", "Mountainheart",
+				"Roughstone", "Stonecrown", "Thunderpeak", "Vaultman", "Winterhold",
+			}},
+		},
+		// Elf family names
+		"high-elf": {
+			"family_name": {any: {
+				"Aelindrel", "Brightstar", "Celestwind", "Dawntide", "Evenshine",
+				"Faerylace", "Goldleaf", "Highbranch", "Ilmaren", "Jaladrel",
+				"Lightwhisper", "Moonfall", "Nightveil", "Opalwind", "Pearlshore",
+				"Radiantleaf", "Silverwind", "Twilightfall", "Umbradawn", "Verisilva",
+				"Windmere", "Xaelan", "Yeralindra", "Zephyrveil", "Aelindrath",
+			}},
+		},
+		"wood-elf": {
+			"family_name": {any: {
+				"Amberstep", "Barkwhisper", "Cedarleaf", "Duskhollow", "Elmhide",
+				"Fernmark", "Greenleaf", "Hazelwood", "Ivybranch", "Jadepath",
+				"Knotroot", "Leafrun", "Mosswall", "Nightroot", "Oakenshade",
+				"Pinebrook", "Quickstep", "Rootweave", "Shadowbark", "Thicketrun",
+				"Underleaf", "Vinespath", "Willowmere", "Yewbranch", "Zephyrleaf",
+			}},
+		},
+		"drow": {
+			"family_name": {any: {
+				"Baenrae", "Crausin", "Despana", "Faeryn", "Godeep",
+				"Hunzrin", "Kenafin", "Nasadra", "Oblodra", "Pharn",
+				"Srune", "Tlabbar", "Ulvith", "Vandree", "Vrinn",
+				"Xorlarrin", "Yauvros", "Zauvirr", "Anras", "Braevin",
+				"Coldspire", "Darkmantle", "Evilthorn", "Frostbane", "Grimveil",
+			}},
+		},
+		// Halfling surnames
+		"lightfoot": {
+			"surname": {any: {
+				"Appleblossom", "Barleycorn", "Cloverhill", "Dalebottom", "Elmwick",
+				"Fernhill", "Goodbarrel", "Honeycomb", "Ironfoot", "Jestermoor",
+				"Kettlewright", "Littlemoss", "Meadowbrook", "Nettlewick", "Oldbottom",
+				"Pippin", "Quickfoot", "Rushwick", "Sandybank", "Thistlewick",
+				"Underhill", "Valewick", "Warmfoot", "Yarrowdale", "Zephyrmoss",
+			}},
+		},
+		"stout": {
+			"surname": {any: {
+				"Alebarrel", "Boulderback", "Cobblestone", "Deepwick", "Earthfoot",
+				"Flintmoor", "Greystone", "Hardmoss", "Ironwick", "Jumblewood",
+				"Kettlebrook", "Lowhill", "Muddyfoot", "Northhill", "Oldwick",
+				"Pebblebrook", "Quarryfoot", "Roughwick", "Stonepot", "Thornwood",
+				"Underglen", "Vaultmoss", "Warmstone", "Yellowhill", "Zestwick",
+			}},
+		},
+		// Dragonborn clan names
+		"dragonborn": {
+			"clan_name": {any: {
+				"Clethtinthiallor", "Daardendrian", "Delmirev", "Drachern", "Fenkenkabradon",
+				"Kepeshkmolik", "Kerrhylon", "Kimbatuul", "Linxakasendalor", "Myastan",
+				"Nemmonis", "Norixius", "Ophinshtalajiir", "Prexijandilin", "Shestendeliath",
+				"Dravitas", "Flameback", "Frostwing", "Goldscale", "Ironhorn",
+				"Stoneclaw", "Stormbreath", "Thunderwing", "Voltixis", "Wrathscale",
+			}},
+		},
+		// Gnome clan names and nicknames
+		"forest-gnome": {
+			"clan_name": {any: {
+				"Bafflestone", "Clankwidget", "Daergel", "Folkor", "Garrick",
+				"Nackle", "Murnig", "Ningel", "Raulnor", "Scheppen",
+				"Timbers", "Turen", "Whistlebrew", "Bimble", "Cobblecog",
+				"Dinglehop", "Fiddlewick", "Gigglethorn", "Hobblecog", "Inksworth",
+				"Jinglebell", "Kettlecog", "Logicrock", "Mumblewood", "Noodlewick",
+			}},
+			"nickname": {any: {
+				"Alchemist", "Badger", "Blinky", "Bubbles", "Buttons",
+				"Clockwork", "Cobweb", "Coppernose", "Crinkle", "Dinky",
+				"Doodle", "Fidget", "Flicker", "Frizzy", "Giggle",
+				"Gizmo", "Glimmer", "Grumble", "Gulliver", "Hiccup",
+				"Hobble", "Jingle", "Knobby", "Noodle", "Sparky",
+			}},
+		},
+		"rock-gnome": {
+			"clan_name": {any: {
+				"Beren", "Dankil", "Gimble", "Glim", "Jebeddo",
+				"Kellen", "Namfoodle", "Raulnor", "Roondar", "Seebo",
+				"Sindri", "Warryn", "Wrenn", "Zook", "Alston",
+				"Boddynock", "Conlin", "Eldon", "Erky", "Fonkin",
+				"Frug", "Gerbo", "Gimble", "Glim", "Grumble",
+			}},
+			"nickname": {any: {
+				"Axle", "Bolt", "Brainy", "Cog", "Coil",
+				"Conduit", "Crank", "Dial", "Dynamo", "Fulcrum",
+				"Gadget", "Gauge", "Gear", "Grease", "Hammer",
+				"Lever", "Magnet", "Piston", "Pulley", "Ratchet",
+				"Rivet", "Socket", "Spark", "Spring", "Widget",
+			}},
+		},
+		// Half-Elf (human convention surname + elven family_name)
+		"half-elf": {
+			"surname": {any: {
+				"Ashwood", "Brightmere", "Coldbrook", "Dawnshore", "Emberglen",
+				"Fairhaven", "Goldhaven", "Hartmere", "Irondale", "Jasmoor",
+				"Kestrelmere", "Longshore", "Morrowick", "Nightbrook", "Oakmere",
+				"Pendlemoor", "Redbrook", "Silverdale", "Thorndale", "Underpool",
+				"Vanwick", "Wellmere", "Whitbrook", "Yarrowmere", "Zellwood",
+			}},
+			"family_name": {any: {
+				"Aelindris", "Brightleaf", "Celeswind", "Dawnmere", "Evenshade",
+				"Faeryveil", "Goldenbough", "Highwind", "Ilmendrel", "Jaladris",
+				"Lightfall", "Moonveil", "Nightleaf", "Opaldawn", "Pearlwind",
+				"Radiantbranch", "Silverleaf", "Twilightveil", "Umbraven", "Verilas",
+				"Windleaf", "Xaelis", "Yeralin", "Zephyrleaf", "Aelindor",
+			}},
+		},
+		// Half-Orc surnames
+		"half-orc": {
+			"surname": {any: {
+				"Ashbane", "Blackthorn", "Cragfist", "Darkstone", "Emberfist",
+				"Fiercehorn", "Greymantle", "Hardclaw", "Ironjaw", "Jawbone",
+				"Knifehide", "Longtusk", "Mudbane", "Nightfang", "Orcbane",
+				"Piercetusk", "Roughskin", "Scarfang", "Thornback", "Uglytusk",
+				"Vilehorn", "Warbone", "Xtone", "Yellowfang", "Zergtusk",
+			}},
+		},
+		// Tiefling — infernal names (single component, gender='any')
+		"tiefling-infernal": {
+			"infernal_name": {any: {
+				"Acamar", "Caiphon", "Delban", "Gibbeth", "Hadar",
+				"Khirad", "Nihal", "Ulban", "Zandagon", "Acrux",
+				"Algol", "Ankaret", "Belthas", "Cabal", "Damakos",
+				"Ekemon", "Iados", "Kairon", "Leucis", "Mordai",
+				"Nemeia", "Orianna", "Pell", "Skamos", "Vrynn",
+			}},
+		},
+		// Tiefling — virtue words (single component, gender='any')
+		"tiefling-virtue": {
+			"virtue_word": {any: {
+				"Artistry", "Clarity", "Courage", "Devotion", "Discipline",
+				"Eloquence", "Endurance", "Faith", "Fortitude", "Grace",
+				"Hope", "Humility", "Integrity", "Justice", "Knowledge",
+				"Liberty", "Magnanimity", "Mercy", "Peace", "Resilience",
+				"Solidarity", "Truth", "Unity", "Valor", "Wisdom",
+			}},
+		},
+	}
 }
 
 // ---------------------------------------------------------------------------
