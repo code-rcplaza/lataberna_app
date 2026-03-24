@@ -793,7 +793,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 
 		{
 			category: "motivation",
-			content:  "Tu longevidad élfil te da perspectiva que los mortales no tienen. Eso te pesa: ves el patrón del error humano repetirse sin fin y querés romperlo.",
+			content:  "Tu longevidad élfica te da perspectiva que los mortales no tienen. Eso te pesa: ves el patrón del error humano repetirse sin fin y querés romperlo.",
 			compat:   speciesRows([]string{"elf"}, "primary"),
 		},
 		{
