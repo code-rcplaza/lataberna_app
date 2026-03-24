@@ -182,6 +182,22 @@ func merge(slices ...[]compatRow) []compatRow {
 	return out
 }
 
+// otherSpecies returns all species keys except those listed.
+func otherSpecies(except ...string) []string {
+	all := []string{"elf", "dwarf", "halfling", "gnome", "human", "half-elf", "half-orc", "tiefling", "dragonborn"}
+	skip := make(map[string]bool, len(except))
+	for _, s := range except {
+		skip[s] = true
+	}
+	var out []string
+	for _, s := range all {
+		if !skip[s] {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
 func classRows(classes []string, group string) []compatRow {
 	out := make([]compatRow, len(classes))
 	for i, c := range classes {
@@ -553,48 +569,48 @@ func narrativeSeedData() []narrativeSeedEntry {
 
 		{
 			category: "background",
-			content:  "Viviste tus primeros doscientos años en la ciudad élfil, donde el tiempo pasa lento y las decisiones pesan siglos. Un día decidiste que ya era hora de ver el mundo mortal.",
-			compat:   speciesRows([]string{"elf"}, "primary"),
+			content:  "Viviste tus primeros doscientos años en la ciudad élfica, donde el tiempo pasa lento y las decisiones pesan siglos. Un día decidiste que ya era hora de ver el mundo mortal.",
+			compat:   merge(speciesRows([]string{"elf"}, "primary"), speciesRows([]string{"half-elf"}, "secondary"), speciesRows(otherSpecies("elf", "half-elf"), "excluded")),
 		},
 		{
 			category: "background",
 			content:  "En las montañas de tu clan enano, el honor es lo más sagrado. Perdiste el tuyo por razones que solo vos conocés, y desde entonces buscás redimirte con cada acción.",
-			compat:   speciesRows([]string{"dwarf"}, "primary"),
+			compat:   merge(speciesRows([]string{"dwarf"}, "primary"), speciesRows(otherSpecies("dwarf"), "excluded")),
 		},
 		{
 			category: "background",
 			content:  "Como medio elfo, nunca perteneciste del todo a ningún mundo. Eso te hizo observador, adaptable y, en el fondo, profundamente solitario.",
-			compat:   speciesRows([]string{"half-elf"}, "primary"),
+			compat:   merge(speciesRows([]string{"half-elf"}, "primary"), speciesRows([]string{"elf"}, "secondary"), speciesRows(otherSpecies("half-elf", "elf"), "excluded")),
 		},
 		{
 			category: "background",
 			content:  "Tu sangre infernal siempre te hizo diferente. En tu ciudad natal te miraban con desconfianza; en el camino, aprendiste a usar esa incomodidad a tu favor.",
-			compat:   speciesRows([]string{"tiefling"}, "primary"),
+			compat:   merge(speciesRows([]string{"tiefling"}, "primary"), speciesRows(otherSpecies("tiefling"), "excluded")),
 		},
 		{
 			category: "background",
 			content:  "El clan Dragonborn al que pertenecés lleva siglos de honor. Vos sos el primero en generaciones que eligió aventurarse solo, rompiendo una tradición colectiva.",
-			compat:   speciesRows([]string{"dragonborn"}, "primary"),
+			compat:   merge(speciesRows([]string{"dragonborn"}, "primary"), speciesRows(otherSpecies("dragonborn"), "excluded")),
 		},
 		{
 			category: "background",
 			content:  "Creciste en los alrededores de una ciudad enana como humano en minoría. Aprendiste a moverte entre gente que te supera en fuerza y paciencia; eso te volvió diplomático por necesidad.",
-			compat:   merge(speciesRows([]string{"human"}, "primary"), speciesRows([]string{"half-elf"}, "secondary")),
+			compat:   merge(speciesRows([]string{"human"}, "primary"), speciesRows([]string{"half-elf"}, "secondary"), speciesRows(otherSpecies("human", "half-elf"), "excluded")),
 		},
 		{
 			category: "background",
 			content:  "Tu aldea halfling era conocida en toda la región por su gastronomía. Vos eras el único que quería ver qué había más allá de la colina del fondo.",
-			compat:   speciesRows([]string{"halfling"}, "primary"),
+			compat:   merge(speciesRows([]string{"halfling"}, "primary"), speciesRows(otherSpecies("halfling"), "excluded")),
 		},
 		{
 			category: "background",
 			content:  "Creciste en un taller gnomo donde todo se desarmaba y se volvía a armar mejor. Tu curiosidad nunca encontró límites, ni siquiera los que la física debería imponer.",
-			compat:   speciesRows([]string{"gnome"}, "primary"),
+			compat:   merge(speciesRows([]string{"gnome"}, "primary"), speciesRows(otherSpecies("gnome"), "excluded")),
 		},
 		{
 			category: "background",
 			content:  "Fuiste criado entre humanos que temían tu herencia orca. Aprendiste que la fuerza que ellos temían era exactamente lo que necesitarías para sobrevivir sin ellos.",
-			compat:   speciesRows([]string{"half-orc"}, "primary"),
+			compat:   merge(speciesRows([]string{"half-orc"}, "primary"), speciesRows(otherSpecies("half-orc"), "excluded")),
 		},
 
 		// ═══════════════════════════════════════════════════════════════════
@@ -794,47 +810,51 @@ func narrativeSeedData() []narrativeSeedEntry {
 		{
 			category: "motivation",
 			content:  "Tu longevidad élfica te da perspectiva que los mortales no tienen. Eso te pesa: ves el patrón del error humano repetirse sin fin y querés romperlo.",
-			compat:   speciesRows([]string{"elf"}, "primary"),
+			compat: append(append(
+				speciesRows([]string{"elf"}, "primary"),
+				speciesRows([]string{"half-elf"}, "secondary")...),
+				speciesRows([]string{"human", "half-orc", "tiefling", "dragonborn", "dwarf", "halfling", "gnome"}, "excluded")...,
+			),
 		},
 		{
 			category: "motivation",
 			content:  "El clan enano exige resultados. Volvés cuando tengas un logro digno de ser tallado en la piedra de la sala ancestral.",
-			compat:   speciesRows([]string{"dwarf"}, "primary"),
+			compat:   merge(speciesRows([]string{"dwarf"}, "primary"), speciesRows(otherSpecies("dwarf"), "excluded")),
 		},
 		{
 			category: "motivation",
 			content:  "Como halfling, el mundo te subestima siempre. Eso te dio una ventaja que jamás vas a desperdiciar.",
-			compat:   speciesRows([]string{"halfling"}, "primary"),
+			compat:   merge(speciesRows([]string{"halfling"}, "primary"), speciesRows(otherSpecies("halfling"), "excluded")),
 		},
 		{
 			category: "motivation",
 			content:  "Tu curiosidad gnoma no tiene límites: necesitás entender cómo funciona todo, desarmarlo si es necesario, y armarlo de nuevo pero mejor.",
-			compat:   speciesRows([]string{"gnome"}, "primary"),
+			compat:   merge(speciesRows([]string{"gnome"}, "primary"), speciesRows(otherSpecies("gnome"), "excluded")),
 		},
 		{
 			category: "motivation",
 			content:  "Querés demostrar que la sangre infernal no define el destino. Cada bien que hacés es una refutación de lo que el mundo esperaba de vos.",
-			compat:   speciesRows([]string{"tiefling"}, "primary"),
+			compat:   merge(speciesRows([]string{"tiefling"}, "primary"), speciesRows(otherSpecies("tiefling"), "excluded")),
 		},
 		{
 			category: "motivation",
 			content:  "Tu herencia orca te dio fuerza; tu herencia humana te dio ambición. Juntas te hacen imparable, si lográs que el mundo te dé una oportunidad.",
-			compat:   speciesRows([]string{"half-orc"}, "primary"),
+			compat:   merge(speciesRows([]string{"half-orc"}, "primary"), speciesRows(otherSpecies("half-orc"), "excluded")),
 		},
 		{
 			category: "motivation",
 			content:  "Querés reconstruir el nombre de tu familia humana después de que las deudas y las malas decisiones lo destruyeran. Empezás desde cero con lo que tenés.",
-			compat:   speciesRows([]string{"human"}, "primary"),
+			compat:   merge(speciesRows([]string{"human"}, "primary"), speciesRows([]string{"half-elf"}, "secondary"), speciesRows(otherSpecies("human", "half-elf"), "excluded")),
 		},
 		{
 			category: "motivation",
 			content:  "Como medio elfo, cargás con las expectativas de dos mundos que nunca se pusieron de acuerdo. Decidiste ignorar ambos y definirte solo.",
-			compat:   speciesRows([]string{"half-elf"}, "primary"),
+			compat:   merge(speciesRows([]string{"half-elf"}, "primary"), speciesRows([]string{"elf"}, "secondary"), speciesRows(otherSpecies("half-elf", "elf"), "excluded")),
 		},
 		{
 			category: "motivation",
 			content:  "Tu clan dragonborn lleva generaciones sin ver a un verdadero héroe salir de sus filas. Eso termina con vos.",
-			compat:   speciesRows([]string{"dragonborn"}, "primary"),
+			compat:   merge(speciesRows([]string{"dragonborn"}, "primary"), speciesRows(otherSpecies("dragonborn"), "excluded")),
 		},
 
 		// ═══════════════════════════════════════════════════════════════════
@@ -1085,48 +1105,48 @@ func narrativeSeedData() []narrativeSeedEntry {
 
 		{
 			category: "secret",
-			content:  "Tu memoria élfil guarda algo que presenciaste hace siglos y que nadie más vivo recuerda. Esa información podría cambiar el equilibrio de poder en el mundo.",
-			compat:   speciesRows([]string{"elf"}, "primary"),
+			content:  "Tu memoria élfica guarda algo que presenciaste hace siglos y que nadie más vivo recuerda. Esa información podría cambiar el equilibrio de poder en el mundo.",
+			compat:   merge(speciesRows([]string{"elf"}, "primary"), speciesRows([]string{"half-elf"}, "secondary"), speciesRows(otherSpecies("elf", "half-elf"), "excluded")),
 		},
 		{
 			category: "secret",
 			content:  "El clan enano al que pertenecés ocultó algo durante generaciones. Vos descubriste qué era, y la respuesta te dejó con más preguntas que antes.",
-			compat:   speciesRows([]string{"dwarf"}, "primary"),
+			compat:   merge(speciesRows([]string{"dwarf"}, "primary"), speciesRows(otherSpecies("dwarf"), "excluded")),
 		},
 		{
 			category: "secret",
 			content:  "Tu herencia de medio humano y medio elfo viene de una unión que ninguno de los dos lados aprobó. Hay personas que todavía buscan borrar esa historia.",
-			compat:   speciesRows([]string{"half-elf"}, "primary"),
+			compat:   merge(speciesRows([]string{"half-elf"}, "primary"), speciesRows([]string{"elf"}, "secondary"), speciesRows(otherSpecies("half-elf", "elf"), "excluded")),
 		},
 		{
 			category: "secret",
 			content:  "Llevas una marca de tu sangre orca que, si alguien la reconociera, revelaría un linaje que preferís mantener oculto.",
-			compat:   speciesRows([]string{"half-orc"}, "primary"),
+			compat:   merge(speciesRows([]string{"half-orc"}, "primary"), speciesRows(otherSpecies("half-orc"), "excluded")),
 		},
 		{
 			category: "secret",
 			content:  "El nombre que usás no es el tuyo. El verdadero nombre tiefling que te dieron al nacer tiene poder, y alguien podría usarlo en tu contra.",
-			compat:   speciesRows([]string{"tiefling"}, "primary"),
+			compat:   merge(speciesRows([]string{"tiefling"}, "primary"), speciesRows(otherSpecies("tiefling"), "excluded")),
 		},
 		{
 			category: "secret",
 			content:  "El color de tus escamas no coincide con el clan que decís representar. Hay una historia familiar que enterraste tan profundo que casi la olvidaste.",
-			compat:   speciesRows([]string{"dragonborn"}, "primary"),
+			compat:   merge(speciesRows([]string{"dragonborn"}, "primary"), speciesRows(otherSpecies("dragonborn"), "excluded")),
 		},
 		{
 			category: "secret",
 			content:  "Sos más valiente de lo que parecés, y eso te aterra. Porque si la gente lo descubriera, empezarían a pedirte cosas que no sabés si podés dar.",
-			compat:   speciesRows([]string{"halfling"}, "primary"),
+			compat:   merge(speciesRows([]string{"halfling"}, "primary"), speciesRows(otherSpecies("halfling"), "excluded")),
 		},
 		{
 			category: "secret",
 			content:  "Tu invento gnomo más famoso tiene un defecto que nunca corregiste. Hasta ahora nadie resultó herido, pero es solo cuestión de tiempo.",
-			compat:   speciesRows([]string{"gnome"}, "primary"),
+			compat:   merge(speciesRows([]string{"gnome"}, "primary"), speciesRows(otherSpecies("gnome"), "excluded")),
 		},
 		{
 			category: "secret",
 			content:  "Nunca llegaste a ese lugar del que tanto hablás. Pero la historia que inventaste es tan buena que casi vos mismo la creés.",
-			compat:   speciesRows([]string{"human"}, "primary"),
+			compat:   merge(speciesRows([]string{"human"}, "primary"), speciesRows([]string{"half-elf"}, "secondary"), speciesRows(otherSpecies("human", "half-elf"), "excluded")),
 		},
 
 		// ═══════════════════════════════════════════════════════════════════
