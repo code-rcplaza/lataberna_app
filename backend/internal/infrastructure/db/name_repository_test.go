@@ -161,6 +161,54 @@ func TestFindByType_EmptyPool(t *testing.T) {
 	}
 }
 
+// TestSeedNamesV3_Idempotency verifies that calling SeedContentIfEmpty twice produces
+// identical name_entries counts (V3 idempotency guarantee).
+func TestSeedNamesV3_Idempotency(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+
+	if err := infradb.SeedContentIfEmpty(ctx, db); err != nil {
+		t.Fatalf("first SeedContentIfEmpty: %v", err)
+	}
+
+	var countAfterFirst int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM name_entries`).Scan(&countAfterFirst); err != nil {
+		t.Fatalf("count after first seed: %v", err)
+	}
+
+	if err := infradb.SeedContentIfEmpty(ctx, db); err != nil {
+		t.Fatalf("second SeedContentIfEmpty: %v", err)
+	}
+
+	var countAfterSecond int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM name_entries`).Scan(&countAfterSecond); err != nil {
+		t.Fatalf("count after second seed: %v", err)
+	}
+
+	if countAfterFirst != countAfterSecond {
+		t.Errorf("second seed changed name_entries count: %d → %d", countAfterFirst, countAfterSecond)
+	}
+}
+
+// TestSeedNamesByVersion_ReachesV3 verifies that seed_version = 3 after SeedContentIfEmpty
+// completes on a fresh DB.
+func TestSeedNamesByVersion_ReachesV3(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+
+	if err := infradb.SeedContentIfEmpty(ctx, db); err != nil {
+		t.Fatalf("SeedContentIfEmpty: %v", err)
+	}
+
+	var version int
+	if err := db.QueryRowContext(ctx, `SELECT version FROM seed_version WHERE id = 1`).Scan(&version); err != nil {
+		t.Fatalf("read seed_version: %v", err)
+	}
+	if version != 3 {
+		t.Errorf("expected seed_version = 3, got %d", version)
+	}
+}
+
 // TestNameRepository_FindByType verifies component type filtering.
 func TestNameRepository_FindByType(t *testing.T) {
 	db := openTestDB(t)

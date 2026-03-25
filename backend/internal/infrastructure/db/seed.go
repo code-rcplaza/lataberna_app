@@ -99,7 +99,618 @@ func seedNamesByVersion(ctx context.Context, db *sql.DB) error {
 			return fmt.Errorf("seedNamesByVersion: v2: %w", err)
 		}
 	}
+	if version < 3 {
+		if err := seedNamesV3(ctx, db); err != nil {
+			return fmt.Errorf("seedNamesByVersion: v3: %w", err)
+		}
+	}
 	return nil
+}
+
+func seedNamesV3(ctx context.Context, db *sql.DB) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("seedNamesV3: begin: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+
+	// ---- Phase A: replace V2 component pools ----
+	compStmt, err := tx.PrepareContext(ctx,
+		`INSERT OR IGNORE INTO name_entries (id, species_key, gender, name_type, name, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
+	if err != nil {
+		return fmt.Errorf("seedNamesV3: prepare component stmt: %w", err)
+	}
+	defer compStmt.Close()
+
+	compIdx := 0
+	for speciesKey, typeMap := range nameSeedDataV3Components() {
+		for nameType, genderMap := range typeMap {
+			if _, err := tx.ExecContext(ctx,
+				`DELETE FROM name_entries WHERE species_key = ? AND name_type = ?`,
+				speciesKey, nameType); err != nil {
+				return fmt.Errorf("seedNamesV3: delete pool %q/%q: %w", speciesKey, nameType, err)
+			}
+			for gender, names := range genderMap {
+				for _, name := range names {
+					compIdx++
+					id := fmt.Sprintf("name-v3c-%05d", compIdx)
+					if _, err := compStmt.ExecContext(ctx, id, speciesKey, gender, nameType, name, now); err != nil {
+						return fmt.Errorf("seedNamesV3: insert component %q %q %q %q: %w",
+							speciesKey, nameType, gender, name, err)
+					}
+				}
+			}
+		}
+	}
+
+	// ---- Phase B: replace V1 first_name pools ----
+	fnStmt, err := tx.PrepareContext(ctx,
+		`INSERT OR IGNORE INTO name_entries (id, species_key, gender, name_type, name, created_at) VALUES (?, ?, ?, 'first_name', ?, ?)`)
+	if err != nil {
+		return fmt.Errorf("seedNamesV3: prepare first_name stmt: %w", err)
+	}
+	defer fnStmt.Close()
+
+	fnIdx := 0
+	for speciesKey, genderMap := range nameSeedDataV3FirstNames() {
+		for gender, names := range genderMap {
+			if _, err := tx.ExecContext(ctx,
+				`DELETE FROM name_entries WHERE species_key = ? AND name_type = 'first_name' AND gender = ?`,
+				speciesKey, gender); err != nil {
+				return fmt.Errorf("seedNamesV3: delete first_name pool %q/%q: %w", speciesKey, gender, err)
+			}
+			for _, name := range names {
+				fnIdx++
+				id := fmt.Sprintf("name-v3f-%05d", fnIdx)
+				if _, err := fnStmt.ExecContext(ctx, id, speciesKey, gender, name, now); err != nil {
+					return fmt.Errorf("seedNamesV3: insert first_name %q %q %q: %w",
+						speciesKey, gender, name, err)
+				}
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	_, err = db.ExecContext(ctx, `UPDATE seed_version SET version = 3 WHERE id = 1`)
+	return err
+}
+
+// nameSeedDataV3Components returns V2 component pool replacements (Spanish vocabulary).
+// All entries use gender = "any". Key structure: speciesKey → nameType → gender → names.
+// Pools populated in Phase 2 (TASK-05 through TASK-20).
+func nameSeedDataV3Components() map[string]map[string]map[string][]string {
+	return map[string]map[string]map[string][]string{
+		// TASK-05: Human surnames — medieval Iberian/Spanish family names
+		"human": {
+			"surname": {
+				"any": {
+					"Aguirre", "Villaverde", "Mondragón", "Fontecilla", "Pedraza",
+					"Montoya", "Fuenlabrada", "Valderrábano", "Cienfuegos", "Altamirano",
+					"Bustamante", "Carvajal", "Echevarría", "Fuentes", "Garrido",
+					"Herrerías", "Iznájar", "Larrañaga", "Manzanares", "Navarrete",
+					"Olavarría", "Palafox", "Quiñones", "Ribadeo", "Salamanca",
+				},
+			},
+		},
+		// TASK-06: Hill-dwarf clan names — hard consonants, Spanish mining/stone/forge compounds
+		"hill-dwarf": {
+			"clan_name": {
+				"any": {
+					"Cincelroca", "Forjapiedra", "Yunquenorte", "Mazopirita", "Fragüegris",
+					"Pedrerón", "Minagrava", "Brasaférrea", "Crisoltosco", "Escoríaverde",
+					"Grietanegra", "Hachaférreo", "Lingotepardo", "Mártillogris", "Nuezpétrea",
+					"Oquedadbruta", "Pilastracérea", "Quebradaroca", "Rejalférrea", "Socavónduro",
+					"Toscagranito", "Uñacincel", "Veinaférreo", "Zócalorudo", "Anclapirita",
+				},
+			},
+		},
+		// TASK-07: Mountain-dwarf clan names — cold, high-altitude Spanish vocabulary
+		"mountain-dwarf": {
+			"clan_name": {
+				"any": {
+					"Glaciopico", "Cumbrenorte", "Ventisquera", "Nevadocima", "Picohielo",
+					"Alturapeña", "Crestafría", "Escarpahelada", "Faldagélida", "Granitocumbre",
+					"Heladerisco", "Invernopico", "Jambaventa", "Ládegranizo", "Mesatahelada",
+					"Nieblacima", "Orcofríos", "Pedregalnieve", "Quebradahielo", "Riscoblanco",
+					"Serraníafría", "Tolvanera", "Umbralnieve", "Ventarrónrisco", "Yermohielo",
+				},
+			},
+		},
+		// TASK-08: High-elf family names — keep 8 canonical Elvish proper nouns + 17 Spanish celestial blends
+		"high-elf": {
+			"family_name": {
+				"any": {
+					// 8 canonical Elvish proper nouns (unchanged)
+					"Aelindrel", "Ilmaren", "Jaladrel", "Verisilva", "Xaelan",
+					"Yeralindra", "Umbradawn", "Aelindrath",
+					// 17 Spanish celestial blends
+					"Vientoluz", "Lunaplata", "Cieloclaro", "Estrellabrisa", "Auroraverde",
+					"Albaplata", "Solniebla", "Medialuna", "Crepúscularis", "Destellovivo",
+					"Fulgorcélis", "Astraliris", "Celesbrillo", "Nitidoalba", "Opalescente",
+					"Refulgencis", "Serenoluz",
+				},
+			},
+		},
+		// TASK-09: Wood-elf family names — organic Spanish forest compounds
+		"wood-elf": {
+			"family_name": {
+				"any": {
+					"Hojasusurro", "Raízverde", "Rocíomiel", "Savaclara", "Cortezamiel",
+					"Almasavia", "Matorralverde", "Musgorío", "Heléchovivo", "Brotetierno",
+					"Cañaveral", "Doselsombra", "Enredadera", "Frondahumeda", "Goterasavia",
+					"Humusblando", "Juncofluvial", "Liquenrocoso", "Mosgotierno", "Nudoanejo",
+					"Orlaforestal", "Pimpolloverde", "Quejaranieve", "Retamaflorida", "Zarcilovivo",
+				},
+			},
+		},
+		// TASK-10: Drow family names — 19 canon Drow house names + 6 Spanish dark compounds
+		"drow": {
+			"family_name": {
+				"any": {
+					// 19 canonical Drow house names (unchanged)
+					"Baenrae", "Crausin", "Despana", "Faeryn", "Hunzrin",
+					"Kenafin", "Nasadra", "Oblodra", "Pharn", "Srune",
+					"Tlabbar", "Ulvith", "Vandree", "Vrinn", "Xorlarrin",
+					"Yauvros", "Zauvirr", "Anras", "Braevin",
+					// 6 Spanish dark compounds (replacing English ones)
+					"Espinaceniza", "Mantovenenoso", "Sangrefría", "Velonegro", "Hielosombra",
+					"Cenizavívora",
+				},
+			},
+		},
+		// TASK-11: Lightfoot halfling surnames — cozy, rustic, pastoral Spanish
+		"lightfoot": {
+			"surname": {
+				"any": {
+					"Trébolseco", "Pradoverde", "Manzanillo", "Campoflor", "Cañaverde",
+					"Macolina", "Cerezuelo", "Alcaravea", "Berroqueña", "Caserillo",
+					"Duraznillo", "Espadañal", "Fresquillo", "Granajuela", "Herbuena",
+					"Juncalejo", "Lavandero", "Melonar", "Nogalejo", "Olivarejo",
+					"Páramo", "Quintanilla", "Retamar", "Serranil", "Tomillar",
+				},
+			},
+		},
+		// TASK-12: Stout halfling surnames — sturdy, earthy, hearth Spanish
+		"stout": {
+			"surname": {
+				"any": {
+					"Barrilero", "Pedrejón", "Hornillo", "Toscabreva", "Gravillón",
+					"Rodapiedra", "Piedrafuerte", "Adobero", "Brochazón", "Canteador",
+					"Dundimbre", "Escobero", "Farragón", "Gravero", "Herrumbre",
+					"Ladrillero", "Mampostero", "Nodosopedro", "Ochavillo", "Peralero",
+					"Roblecejo", "Sillarejo", "Tochero", "Umbralejo", "Vigarejo",
+				},
+			},
+		},
+		// TASK-13: Dragonborn clan names — 15 canon Draconic proper nouns + 10 Spanish fire/scale compounds
+		"dragonborn": {
+			"clan_name": {
+				"any": {
+					// 15 canonical Draconic proper nouns (unchanged)
+					"Clethtinthiallor", "Daardendrian", "Delmirev", "Drachern", "Fenkenkabradon",
+					"Kepeshkmolik", "Kerrhylon", "Kimbatuul", "Linxakasendalor", "Myastan",
+					"Nemmonis", "Norixius", "Ophinshtalajiir", "Prexijandilin", "Shestendeliath",
+					// 10 Spanish fire/scale/breath compounds (replacing English ones)
+					"Llamamante", "Escamadorada", "Vientotrueno", "Fuegoscama", "Alaspedernal",
+					"Brasacórnea", "Crestallama", "Dienteigneo", "Escarlataescama", "Fragualiento",
+				},
+			},
+		},
+		// TASK-14: Forest-gnome clan names — 10 fantasy proper nouns + 15 Spanish whimsical forest words
+		"forest-gnome": {
+			"clan_name": {
+				"any": {
+					// 10 canonical fantasy proper nouns (unchanged)
+					"Daergel", "Folkor", "Garrick", "Nackle", "Murnig",
+					"Ningel", "Raulnor", "Scheppen", "Timbers", "Turen",
+					// 15 Spanish whimsical forest words
+					"Chapucero", "Saltarín", "Cuentahojas", "Cosquillas", "Hormiguita",
+					"Ruidillo", "Gorjeador", "Bichejo", "Aleteador", "Chisporroteo",
+					"Farfullero", "Gorrino", "Hurgoncillo", "Inquieto", "Jolgorio",
+				},
+			},
+			// TASK-15: Forest-gnome nicknames — whimsical Spanish nature words
+			"nickname": {
+				"any": {
+					"Saltarín", "Cosquillas", "Hormiguita", "Ruidillo", "Gorjeador",
+					"Bichejo", "Aleteador", "Chisporroteo", "Farfullero", "Hurgoncillo",
+					"Inquieto", "Jolgorio", "Picolisto", "Revoloteo", "Susurrito",
+					"Trotamundo", "Velozpata", "Zapatillo", "Aleteo", "Burujón",
+					"Cabriolé", "Diablillo", "Escurridizo", "Fresquito", "Gandujillo",
+				},
+			},
+		},
+		// TASK-16: Rock-gnome clan names — 15 fantasy proper nouns + 10 Spanish mechanical words
+		"rock-gnome": {
+			"clan_name": {
+				"any": {
+					// 15 canonical fantasy proper nouns (unchanged)
+					"Beren", "Dankil", "Gimble", "Glim", "Jebeddo",
+					"Kellen", "Namfoodle", "Raulnor", "Roondar", "Seebo",
+					"Sindri", "Warryn", "Wrenn", "Zook", "Alston",
+					// 10 Spanish mechanical/tinkering words (replacing English ones)
+					"Engranaje", "Palancón", "Tornillero", "Émbolo", "Biela",
+					"Cigüeñal", "Eslabonero", "Fraguín", "Gatillero", "Husillo",
+				},
+			},
+			// TASK-17: Rock-gnome nicknames — Spanish mechanical compound diminutives
+			"nickname": {
+				"any": {
+					"Engranaje", "Chispazo", "Resorte", "Trinquete", "Polea",
+					"Émbolo", "Manivela", "Biela", "Palanca", "Cigüeñal",
+					"Destornillín", "Eslaboncito", "Fraguete", "Gatillín", "Husilete",
+					"Inducido", "Jabalcón", "Levalín", "Muescado", "Nivelete",
+					"Orejeta", "Piñoncillo", "Quiloncito", "Resortín", "Soldadorcillo",
+				},
+			},
+		},
+		// TASK-18: Half-elf surnames — Spanish-Elvish celestial/nature blends
+		"half-elf": {
+			"surname": {
+				"any": {
+					"Bosqueluz", "Aguaplata", "Cieloverde", "Lunabrisa", "Albaviento",
+					"Auroranoche", "Claroviento", "Destelloverde", "Estrellarío", "Fulgornoche",
+					"Graciabosque", "Hálitoplata", "Iluminado", "Juncoviento", "Lagunaluz",
+					"Medianoche", "Nitidoverde", "Opalbrisa", "Plateadoviento", "Quilombosque",
+					"Reflejoluna", "Serenabosque", "Tenueplata", "Umbraclara", "Vesperaluz",
+				},
+			},
+			// TASK-19: Half-elf family names — 7 canonical Elvish proper nouns + 18 Spanish celestial/nature blends
+			"family_name": {
+				"any": {
+					// 7 canonical Elvish proper nouns (unchanged)
+					"Aelindris", "Ilmendrel", "Jaladris", "Verilas", "Xaelis",
+					"Yeralin", "Aelindor",
+					// 18 Spanish celestial/nature blends with Elvish syllable feel
+					"Lunasilvae", "Cielofrendel", "Estrelindra", "Aurorandriel", "Ventolindel",
+					"Platanoris", "Albalindra", "Solnoralin", "Nitidorviel", "Opalendis",
+					"Refulgendrel", "Serenalindra", "Brilladorlin", "Crepuscorviel", "Destellindor",
+					"Fulgalindra", "Gracianorviel", "Medialindra",
+				},
+			},
+		},
+		// TASK-20: Tiefling virtue words — formal Spanish abstract virtues
+		"tiefling-virtue": {
+			"virtue_word": {
+				"any": {
+					"Valor", "Sabiduría", "Fe", "Esperanza", "Justicia",
+					"Fortaleza", "Misericordia", "Verdad", "Libertad", "Gracia",
+					"Templanza", "Prudencia", "Piedad", "Clemencia", "Nobleza",
+					"Virtud", "Lealtad", "Honor", "Integridad", "Dignidad",
+					"Rectitud", "Bondad", "Paciencia", "Coraje", "Serenidad",
+				},
+			},
+		},
+	}
+}
+
+// nameSeedDataV3FirstNames returns V1 first_name pool replacements.
+// Replaces English compound words with proper fantasy first names.
+// Key structure: speciesKey → gender → names.
+// Pools populated in Phase 3 (TASK-21 through TASK-38).
+func nameSeedDataV3FirstNames() map[string]map[string][]string {
+	return map[string]map[string][]string{
+
+		// TASK-21 & TASK-22: Wood-elf first names
+		// Keep canonical Elvish first names; replace English compound words (Bramblewick,
+		// Greenmantle, Leafwhisper, etc.) with flowing Elvish-feel names.
+		"wood-elf": {
+			"male": {
+				// canonical 5e wood-elf first names
+				"Adran", "Aelar", "Beiro", "Carric", "Dayereth",
+				"Enna", "Galinndan", "Hadarai", "Ivellios", "Laucian",
+				"Mindartis", "Naeris", "Paelias", "Quarion", "Riardon",
+				"Soveliss", "Thamior", "Theren", "Valenor", "Varis",
+				"Zannin", "Aravel", "Brysis", "Celadyr", "Delmair",
+				// new Elvish-feel first names (replace English compounds)
+				"Sylvaer", "Tarindel", "Orinmar", "Vaelor", "Brindael",
+				"Elvarion", "Mosindal", "Raelindor", "Thalindel", "Aerindal",
+				"Caevindor", "Delioryn", "Faelorin", "Galendar", "Haelorin",
+				"Ilandor", "Jaelorin", "Kaelorin", "Laelindor", "Naerindal",
+				"Orinvael", "Paelvindor", "Raelvoryn", "Sylindael", "Vaelmorin",
+			},
+			"female": {
+				// canonical 5e wood-elf first names
+				"Adrie", "Althaea", "Anastrianna", "Andraste", "Antinua",
+				"Bethrynna", "Birel", "Caelynn", "Drusilia", "Enna",
+				"Felosial", "Ielenia", "Jelenneth", "Keyleth", "Leshanna",
+				"Mialee", "Naivara", "Quelenna", "Sariel", "Shanairla",
+				"Shava", "Silaqui", "Theirastra", "Valna", "Xanaphia",
+				// new Elvish-feel first names (replace English compounds)
+				"Sylvara", "Thalindra", "Oriniel", "Vaelindra", "Brindaela",
+				"Elvariel", "Mosinara", "Raelindra", "Aerindel", "Caevindra",
+				"Deliorna", "Faelindra", "Galendara", "Haelindra", "Ilandael",
+				"Jaelindra", "Kaelindra", "Laelindra", "Naerindel", "Orinvara",
+				"Paelvindra", "Raelvoryn", "Sylindael", "Vaelmora", "Aelindrae",
+			},
+		},
+
+		// TASK-23 & TASK-24: Hill-dwarf first names
+		// Keep canonical 5e first names; replace English compounds with proper dwarf names
+		// using hard consonants and Spanish-friendly phonetics.
+		"hill-dwarf": {
+			"male": {
+				// canonical 5e dwarf first names
+				"Adrik", "Alberich", "Baern", "Barendd", "Brottor",
+				"Bruenor", "Dain", "Darrak", "Delg", "Eberk",
+				"Einkil", "Fargrim", "Flint", "Gardain", "Harbek",
+				"Kildrak", "Morgran", "Orsik", "Oskar", "Rangrim",
+				"Rurik", "Taklinn", "Thoradin", "Thorin", "Tordek",
+				// new dwarf first names (replace English compounds)
+				"Gorgar", "Thordín", "Bragún", "Kolvir", "Durnok",
+				"Harvik", "Grumdar", "Boldrak", "Cindrak", "Ferrak",
+				"Golvir", "Horndar", "Inkrak", "Järvik", "Koldrak",
+				"Lodrak", "Maldrak", "Nordak", "Olvir", "Perdrak",
+				"Rondar", "Soldrak", "Tordrak", "Unrak", "Vendrak",
+			},
+			"female": {
+				// canonical 5e dwarf female first names
+				"Amber", "Artin", "Audhild", "Bardryn", "Dagnal",
+				"Diesa", "Eldeth", "Falkrunn", "Finellen", "Gunnloda",
+				"Gurdis", "Helja", "Hlin", "Kathra", "Kristryd",
+				"Ilde", "Liftrasa", "Mardred", "Riswynn", "Sannl",
+				"Torbera", "Torgga", "Vistra", "Borgna", "Helma",
+				// new dwarf female first names (replace English compounds)
+				"Brundra", "Thordina", "Kolvira", "Durnoka", "Margrit",
+				"Harva", "Grumda", "Boldra", "Cindra", "Ferra",
+				"Golva", "Hornda", "Inkra", "Järva", "Kolda",
+				"Lodra", "Malda", "Norda", "Olva", "Pendra",
+				"Ronda", "Solda", "Torda", "Unra", "Vendra",
+			},
+		},
+
+		// TASK-25 & TASK-26: Mountain-dwarf first names
+		// Cold, harsher feel evocative of high peaks. Replace English compounds.
+		"mountain-dwarf": {
+			"male": {
+				// keep the proper dwarf first names from V1
+				"Aldric", "Borin", "Cragmar", "Dundrak", "Edric",
+				"Forgrim", "Grondar", "Hagrim", "Jarek", "Keldrak",
+				"Lothrak", "Morigrim", "Nordak", "Orkrak", "Peldar",
+				"Quorak", "Rokdar", "Stormak", "Teldrak", "Uldrak",
+				"Vordak", "Wargrim", "Xendrak", "Yeldrak",
+				// new mountain-dwarf first names (replace English compounds)
+				"Grimvír", "Bjorvír", "Coldorn", "Peakmar", "Icevik",
+				"Haldrak", "Frostmar", "Glacirak", "Snowdrak", "Windrak",
+				"Blizzak", "Crestrak", "Driftmar", "Edgerak", "Floerak",
+				"Galerak", "Helmrak", "Icerak", "Jörak", "Koldrak",
+				"Lundrak", "Mirerak", "Nordrak", "Orzrak", "Pirkrak",
+				"Rimrak",
+			},
+			"female": {
+				// keep proper dwarf female names from V1
+				"Aldis", "Borgna", "Coldara", "Durnea", "Elfrida",
+				"Fangora", "Goltara", "Hilma", "Ingrid", "Jorna",
+				"Koldra", "Lofna", "Moltara", "Norgra", "Olda",
+				"Poldra", "Ragna", "Solgra", "Toldra", "Uldra",
+				"Valdra", "Wolgra",
+				// new mountain-dwarf female names (replace English compounds)
+				"Bryndis", "Haldra", "Sigvra", "Frostna", "Icemara",
+				"Glacina", "Snowdra", "Windra", "Blizzna", "Cresta",
+				"Driftna", "Edgena", "Floena", "Galena", "Helmna",
+				"Icena", "Jörna", "Koldna", "Lundna", "Mirena",
+				"Nordna", "Orzna", "Pirkna", "Rimna", "Stormna",
+				"Tundra", "Umbrana", "Valkna", "Winterna",
+			},
+		},
+
+		// TASK-27 & TASK-28: Lightfoot halfling first names
+		// Warm, easy to pronounce. Replace Anglo-fantasy and English names with
+		// Spanish-inflected halfling names that feel natural in a Spanish-speaking setting.
+		"lightfoot": {
+			"male": {
+				// keep the proper halfling first names (not English generic words)
+				"Alton", "Ander", "Cade", "Corrin", "Eldon",
+				"Errich", "Finnan", "Garret", "Lindal", "Lyle",
+				"Merric", "Milo", "Osborn", "Perrin", "Reed",
+				"Roscoe", "Wellby", "Beau", "Cob", "Davin",
+				"Fenrick", "Gable", "Hob", "Jasper", "Kender",
+				// new halfling male names (replace Lucky, Frodo, Pip, etc.)
+				"Tomillo", "Norberto", "Benolín", "Carmelo", "Fulgencio",
+				"Benigno", "Celestino", "Abundio", "Anselmo", "Bartolo",
+				"Ciprian", "Dalmacio", "Eulogio", "Faustino", "Geronimo",
+				"Hilario", "Inocencio", "Jacinto", "Leandro", "Modesto",
+				"Nicanor", "Obdulio", "Pantaleón", "Quirino", "Rodrigo",
+			},
+			"female": {
+				// keep the proper halfling female names
+				"Andry", "Bree", "Callie", "Cora", "Euphemia",
+				"Jillian", "Kithri", "Lavinia", "Lidda", "Merla",
+				"Nedda", "Paela", "Portia", "Seraphina", "Shaena",
+				"Trym", "Vani", "Verna", "Amaryllis", "Birdie",
+				"Celandine", "Dora", "Eglantine", "Florimel", "Goldie",
+				// new halfling female names (replace Clover, Daisy, Blossom, etc.)
+				"Rosalba", "Florinda", "Carmela", "Celestina", "Tomasa",
+				"Lola", "Filomena", "Adoración", "Benilda", "Concepción",
+				"Dolores", "Encarna", "Felisa", "Generosa", "Hortensia",
+				"Imelda", "Jacinta", "Leandra", "Modesta", "Nicanora",
+				"Obdulia", "Pantaleona", "Quirina", "Remedios", "Salomé",
+			},
+		},
+
+		// TASK-29 & TASK-30: Stout halfling first names
+		// Sturdier, more grounded than lightfoot. Replace English monosyllables and
+		// vocabulary words (Anvil, Barrel, Ember, etc.) with grounded Spanish-feel names.
+		"stout": {
+			"male": {
+				// keep proper halfling-style first names
+				"Baldric", "Brock", "Dag", "Fenn", "Garric",
+				"Griff", "Hardy", "Holt", "Mack", "Rob",
+				"Sam", "Tad", "Tom", "Wil",
+				// new stout male names (replace English monosyllables and compound words)
+				"Garrobín", "Pedrolín", "Bernabé", "Bartolín", "Ferrolín",
+				"Abundio", "Anacleto", "Baldomero", "Calisto", "Darío",
+				"Eusebio", "Florencio", "Gaudencio", "Heliodoro", "Ildefonso",
+				"Jenaro", "Leoncio", "Macedonio", "Natalio", "Onésimo",
+				"Patricio", "Quilino", "Rigoberto", "Saturnino", "Teodoro",
+				"Ulpiano", "Venancio", "Wenceslao", "Ximénez", "Zefarino",
+				"Casimiro", "Dámaso", "Eutimio", "Fermín", "Gerardo",
+				"Huberto", "Isidro", "Javier", "Lázaro", "Marcelo",
+			},
+			"female": {
+				// keep proper halfling-style female names
+				"Ally", "Bertha", "Della", "Dot", "Greta",
+				"Hana", "Iris", "Kitty", "May", "Midge",
+				"Nell", "Opal", "Pearl",
+				// new stout female names (replace English vocabulary words)
+				"Robusta", "Petra", "Bernarda", "Bartola", "Abundia",
+				"Anacleta", "Baldomera", "Calista", "Dariana", "Euseba",
+				"Florencia", "Gaudencia", "Heliodora", "Ildefonsa", "Jenara",
+				"Leoncía", "Macedonia", "Natalia", "Onésima", "Patricia",
+				"Quirina", "Rigoberta", "Saturna", "Teodora", "Ulpiana",
+				"Venancia", "Wenceslaa", "Ximénez", "Zeferina", "Casimira",
+				"Dámasa", "Eutimia", "Fermina", "Gerarda", "Huberta",
+				"Isidra", "Javiera", "Lázara", "Marcela", "Nadina",
+				"Obdulia", "Praxedes", "Remedios", "Salomé", "Tomasa",
+				"Ursula", "Visitación", "Xiomara",
+			},
+		},
+
+		// TASK-31 & TASK-32: Forest-gnome first names
+		// Whimsical, fast-sounding, bouncy. Keep canonical gnome first names;
+		// replace English compound words with Spanish-flavor gnome names.
+		"forest-gnome": {
+			"male": {
+				// canonical 5e gnome first names
+				"Alston", "Alvyn", "Boddynock", "Brocc", "Burgell",
+				"Dimble", "Eldon", "Erky", "Fonkin", "Frug",
+				"Gerbo", "Gimble", "Glim", "Jebeddo", "Kellen",
+				"Namfoodle", "Orryn", "Roondar", "Seebo", "Sindri",
+				"Warryn", "Wrenn", "Zook", "Bink", "Dabble",
+				// new forest-gnome male names (replace English compounds)
+				"Boblin", "Fizzwick", "Trinble", "Chispín", "Gorleé",
+				"Picolín", "Saltarín", "Torbellín", "Zumbín", "Brincolín",
+				"Chirpín", "Destellín", "Enredín", "Florecín", "Gorjín",
+				"Hormiguín", "Inquieín", "Jolgolín", "Kelpín", "Lanzolín",
+				"Murmulín", "Nublolín", "Ollín", "Parlotín", "Querubín",
+			},
+			"female": {
+				// canonical 5e gnome female first names
+				"Bimpnottin", "Breena", "Caramip", "Carlin", "Donella",
+				"Duvamil", "Ella", "Ellyjobell", "Ellywick", "Lilli",
+				"Loopmottin", "Lorilla", "Mardnab", "Nissa", "Nyx",
+				"Oda", "Orla", "Roywyn", "Shamil", "Tana",
+				"Waywocket", "Zanna", "Bree", "Calli", "Dotti",
+				// new forest-gnome female names (replace English compounds)
+				"Fizzara", "Nimbelina", "Chispiña", "Tinselina", "Glimara",
+				"Picariña", "Saltarina", "Torbelina", "Zumbina", "Brincolina",
+				"Chirpina", "Destellina", "Enredina", "Florecina", "Gorjina",
+				"Hormiguina", "Inquietina", "Jolgolina", "Kelpina", "Lanzolina",
+				"Murmurina", "Nublolina", "Ollina", "Parlotina", "Querubina",
+			},
+		},
+
+		// TASK-33 & TASK-34: Rock-gnome first names
+		// Mechanical/tinkering feel. Replace English compound words and pure vocabulary words
+		// (Cogsworth, Fiddlesticks, Geargrind, etc.) with gnome names that evoke ingeniería
+		// but are actual first names, not vocabulary words.
+		"rock-gnome": {
+			"male": {
+				// keep canonical-style gnome first names (short, bouncy)
+				"Abzug", "Binkadink", "Dabbledob", "Dinkum", "Gnarlick",
+				"Grumbly", "Klix", "Mekka", "Nix", "Plink",
+				"Tick", "Tock", "Volt",
+				// new rock-gnome male names (replace English compounds and vocabulary)
+				"Coglan", "Wrenchlín", "Gearbin", "Boltwick", "Sparkolin",
+				"Ratchelín", "Sprocketín", "Pistolín", "Tornillín", "Engranín",
+				"Fuellín", "Válvulín", "Resortelín", "Biselín", "Tuercalín",
+				"Cadenaín", "Drenaín", "Embolín", "Fricciolín", "Galboín",
+				"Herraín", "Imbornaín", "Juntaín", "Kablín", "Levaín",
+				"Manivelin", "Noquín", "Oxidín", "Palancín", "Quebraín",
+				"Refilín", "Soplín", "Turbinalín", "Unirín", "Vastín",
+				"Weldarín", "Xcelín", "Yescaín", "Zigzaín",
+			},
+			"female": {
+				// keep canonical-style gnome female names
+				"Binky", "Clank", "Clink", "Cognia", "Dazzle",
+				"Flix", "Glimmer", "Jink", "Minka", "Nixie",
+				"Plink", "Quirk", "Rinka", "Spark", "Sprix",
+				"Tick", "Tinka", "Trinket", "Twix",
+				// new rock-gnome female names (replace English compounds)
+				"Coggara", "Wrenchelina", "Gearbina", "Boltwica", "Sparkara",
+				"Ratchelina", "Sprocketina", "Pistolina", "Tornillina", "Engranina",
+				"Fuellina", "Válvulina", "Resortelina", "Biselina", "Tuercalina",
+				"Cadenaína", "Drenaína", "Embolina", "Fricciolina", "Galboína",
+				"Herraína", "Imbornaína", "Juntaína", "Kablina", "Levaína",
+				"Manivela", "Noquina", "Oxidina", "Palancina", "Quebraína",
+				"Refilina",
+			},
+		},
+
+		// TASK-35 & TASK-36: Tiefling first names
+		// Keep good infernal/Greek-style first names from V1. Replace English abstract
+		// vocabulary words (Despair, Fear, Glory, Shadow, etc.) with proper tiefling names
+		// that evoke darkness but sound like actual names people would be called.
+		"tiefling": {
+			"male": {
+				// canonical 5e tiefling first names (keep all Greek/infernal-style ones)
+				"Akmenos", "Amnon", "Barakas", "Damakos", "Ekemon",
+				"Iados", "Kairon", "Leucis", "Melech", "Mordai",
+				"Morthos", "Pelaios", "Skamos", "Therai", "Zed",
+				// new tiefling male names (replace English abstract words)
+				"Sombriel", "Cenizael", "Iraven", "Dolomar", "Malaven",
+				"Umbrael", "Vexomar", "Irakael", "Luctomar", "Pesarel",
+				"Brisael", "Cifrael", "Ominael", "Pyrael", "Requiael",
+				"Atrevael", "Borrael", "Cadael", "Destruel", "Espael",
+				"Funestael", "Grimael", "Harael", "Infernael", "Justael",
+				"Kryptael", "Limael", "Maligael", "Noctael", "Oscurael",
+				"Profanael", "Ruinael", "Sentinael", "Tenebrael", "Venomael",
+			},
+			"female": {
+				// canonical 5e tiefling female first names (keep Greek/infernal-style ones)
+				"Akta", "Annis", "Bryseis", "Criella", "Damaia",
+				"Ea", "Kallista", "Lerissa", "Makaria", "Nemeia",
+				"Orianna", "Phelaia", "Rieta", "Tanika", "Zelica",
+				// new tiefling female names (replace English abstract words)
+				"Sombriela", "Cenizaela", "Irawen", "Dolormara", "Malawen",
+				"Umbraela", "Vexomara", "Irakaela", "Luctomara", "Pesarael",
+				"Brisaela", "Cifraela", "Ominaela", "Pyraela", "Requiaela",
+				"Atrevaela", "Borraela", "Cadaela", "Destruela", "Espaela",
+				"Funestaela", "Grimaela", "Haraela", "Infernaela", "Justaela",
+				"Kryptaela", "Limaela", "Maligaela", "Noctaela", "Oscuraela",
+				"Profanaela", "Ruinaela", "Sentinaela", "Tenebraela", "Venomaela",
+			},
+		},
+
+		// TASK-37 & TASK-38: Dragonborn first names
+		// Keep 5e canon Draconic-feel names; replace English compound words
+		// (Blazewing, Emberfang, Goldwing, etc.) with Draconic-feel Spanish-friendly names.
+		"dragonborn": {
+			"male": {
+				// canonical 5e dragonborn first names
+				"Arjhan", "Balasar", "Bharash", "Donaar", "Ghesh",
+				"Heskan", "Kriv", "Medrash", "Mehen", "Nadarr",
+				"Pandjed", "Patrin", "Rhogar", "Shamash", "Shedinn",
+				"Tarhun", "Torinn", "Vishap", "Vorel", "Zedaar",
+				// new dragonborn male names (replace English compounds)
+				"Drakomar", "Escamiel", "Llamador", "Aerven", "Flamir",
+				"Ignívael", "Zafirael", "Cobrael", "Esmaltael", "Rubinael",
+				"Dracovel", "Escamel", "Fuegomar", "Garnael", "Helodrak",
+				"Ignirak", "Jasperak", "Kilorak", "Lapisrak", "Malachael",
+				"Nikelrak", "Onikarak", "Peridotael", "Quartzel", "Rubindrak",
+				"Safirak", "Topaciorak", "Uroborak", "Volcanael", "Xifarael",
+			},
+			"female": {
+				// canonical 5e dragonborn female first names
+				"Akra", "Biri", "Daar", "Farideh", "Harann",
+				"Havilar", "Jheri", "Kava", "Korinn", "Mishann",
+				"Nala", "Perra", "Raiann", "Sora", "Surina",
+				"Thava", "Uadjit", "Vroth", "Yenna", "Zara",
+				// new dragonborn female names (replace English compounds)
+				"Drakomara", "Escamiela", "Llamadora", "Aerva", "Flamira",
+				"Ignívara", "Zafirara", "Cobriela", "Esmaltara", "Rubinara",
+				"Dracovela", "Escamela", "Fuegomara", "Garnara", "Helodara",
+				"Igniraka", "Jasperaka", "Kiloraka", "Lapisraka", "Malachara",
+				"Nikelraka", "Onikaraka", "Peridotara", "Quartzela", "Rubinraka",
+				"Safiraka", "Topaciora", "Uroboraka", "Volcanara", "Xifarara",
+			},
+		},
+	}
 }
 
 func seedNamesV1(ctx context.Context, db *sql.DB) error {
