@@ -128,7 +128,42 @@ func migrate(db *sql.DB) error {
 		}
 	}
 
+	// Step 4: Add narrative_version column to seed_version if missing.
+	needsNarrCol, err := seedVersionNeedsNarrativeCol(db)
+	if err != nil {
+		return fmt.Errorf("migrate: check narrative_version col: %w", err)
+	}
+	if needsNarrCol {
+		if _, err := db.Exec(
+			`ALTER TABLE seed_version ADD COLUMN narrative_version INTEGER NOT NULL DEFAULT 1`,
+		); err != nil {
+			return fmt.Errorf("migrate: add narrative_version: %w", err)
+		}
+	}
+
 	return nil
+}
+
+// seedVersionNeedsNarrativeCol reports whether seed_version is missing the narrative_version column.
+func seedVersionNeedsNarrativeCol(db *sql.DB) (bool, error) {
+	rows, err := db.Query(`PRAGMA table_info(seed_version)`)
+	if err != nil {
+		return false, fmt.Errorf("seedVersionNeedsNarrativeCol: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cid, notNull, pk int
+		var colName, colType string
+		var dfltValue sql.NullString
+		if err := rows.Scan(&cid, &colName, &colType, &notNull, &dfltValue, &pk); err != nil {
+			return false, fmt.Errorf("seedVersionNeedsNarrativeCol: scan: %w", err)
+		}
+		if colName == "narrative_version" {
+			return false, nil
+		}
+	}
+	return true, rows.Err()
 }
 
 // nameEntriesNeedsV2 reports whether name_entries is missing the name_type column.
