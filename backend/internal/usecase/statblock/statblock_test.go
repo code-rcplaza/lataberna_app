@@ -68,25 +68,26 @@ func TestGenerate_ModifiersFromFinalStats(t *testing.T) {
 		t.Fatalf("Generate: %v", err)
 	}
 
-	wantMod := func(score int) int { return (score - 10) / 2 }
-
-	if out.Modifiers.STR != wantMod(out.FinalStats.STR) {
-		t.Errorf("STR modifier: got %d, want %d (final=%d)", out.Modifiers.STR, wantMod(out.FinalStats.STR), out.FinalStats.STR)
+	// Use CalculateModifier as the reference — it is independently tested in TestCalculateModifier.
+	// This test verifies that out.Modifiers are derived from FinalStats, not BaseStats.
+	cm := statblock.CalculateModifier
+	if out.Modifiers.STR != cm(out.FinalStats.STR) {
+		t.Errorf("STR modifier: got %d, want %d (final=%d)", out.Modifiers.STR, cm(out.FinalStats.STR), out.FinalStats.STR)
 	}
-	if out.Modifiers.DEX != wantMod(out.FinalStats.DEX) {
-		t.Errorf("DEX modifier: got %d, want %d (final=%d)", out.Modifiers.DEX, wantMod(out.FinalStats.DEX), out.FinalStats.DEX)
+	if out.Modifiers.DEX != cm(out.FinalStats.DEX) {
+		t.Errorf("DEX modifier: got %d, want %d (final=%d)", out.Modifiers.DEX, cm(out.FinalStats.DEX), out.FinalStats.DEX)
 	}
-	if out.Modifiers.CON != wantMod(out.FinalStats.CON) {
-		t.Errorf("CON modifier: got %d, want %d (final=%d)", out.Modifiers.CON, wantMod(out.FinalStats.CON), out.FinalStats.CON)
+	if out.Modifiers.CON != cm(out.FinalStats.CON) {
+		t.Errorf("CON modifier: got %d, want %d (final=%d)", out.Modifiers.CON, cm(out.FinalStats.CON), out.FinalStats.CON)
 	}
-	if out.Modifiers.INT != wantMod(out.FinalStats.INT) {
-		t.Errorf("INT modifier: got %d, want %d (final=%d)", out.Modifiers.INT, wantMod(out.FinalStats.INT), out.FinalStats.INT)
+	if out.Modifiers.INT != cm(out.FinalStats.INT) {
+		t.Errorf("INT modifier: got %d, want %d (final=%d)", out.Modifiers.INT, cm(out.FinalStats.INT), out.FinalStats.INT)
 	}
-	if out.Modifiers.WIS != wantMod(out.FinalStats.WIS) {
-		t.Errorf("WIS modifier: got %d, want %d (final=%d)", out.Modifiers.WIS, wantMod(out.FinalStats.WIS), out.FinalStats.WIS)
+	if out.Modifiers.WIS != cm(out.FinalStats.WIS) {
+		t.Errorf("WIS modifier: got %d, want %d (final=%d)", out.Modifiers.WIS, cm(out.FinalStats.WIS), out.FinalStats.WIS)
 	}
-	if out.Modifiers.CHA != wantMod(out.FinalStats.CHA) {
-		t.Errorf("CHA modifier: got %d, want %d (final=%d)", out.Modifiers.CHA, wantMod(out.FinalStats.CHA), out.FinalStats.CHA)
+	if out.Modifiers.CHA != cm(out.FinalStats.CHA) {
+		t.Errorf("CHA modifier: got %d, want %d (final=%d)", out.Modifiers.CHA, cm(out.FinalStats.CHA), out.FinalStats.CHA)
 	}
 }
 
@@ -380,34 +381,33 @@ func TestGenerate_NilClassPicksRandom(t *testing.T) {
 	}
 }
 
-// ─── 14. Stat variation within bounds [6, 18] ────────────────────────────────
+// ─── 14. BaseStats always cost exactly 27 in D&D 5e point buy ────────────────
 
-func TestGenerate_StatVariationWithinBounds(t *testing.T) {
-	for i := range 50 {
-		seed := int64(i)
-		in := statblock.Input{
-			Class:   ptrClass(domain.ClassFighter),
-			Species: ptrSpecies(domain.SpeciesHuman),
-			Seed:    ptrSeed(seed),
-		}
-		out, err := statblock.Generate(in)
-		if err != nil {
-			t.Fatalf("seed %d: Generate: %v", seed, err)
-		}
-		stats := []struct {
-			name  string
-			value int
-		}{
-			{"STR", out.BaseStats.STR},
-			{"DEX", out.BaseStats.DEX},
-			{"CON", out.BaseStats.CON},
-			{"INT", out.BaseStats.INT},
-			{"WIS", out.BaseStats.WIS},
-			{"CHA", out.BaseStats.CHA},
-		}
-		for _, s := range stats {
-			if s.value < 6 || s.value > 18 {
-				t.Errorf("seed %d: BaseStats.%s = %d — out of bounds [6,18]", seed, s.name, s.value)
+func TestGenerate_BaseStatsPointBuyCost27(t *testing.T) {
+	classes := []domain.Class{
+		domain.ClassBarbarian, domain.ClassBard, domain.ClassCleric,
+		domain.ClassDruid, domain.ClassFighter, domain.ClassMonk,
+		domain.ClassPaladin, domain.ClassRanger, domain.ClassRogue,
+		domain.ClassSorcerer, domain.ClassWarlock, domain.ClassWizard,
+		domain.ClassArtificer,
+	}
+
+	for _, class := range classes {
+		for i := range 20 {
+			seed := int64(i)
+			in := statblock.Input{
+				Class:   ptrClass(class),
+				Species: ptrSpecies(domain.SpeciesHuman),
+				Seed:    ptrSeed(seed),
+			}
+			out, err := statblock.Generate(in)
+			if err != nil {
+				t.Fatalf("%s seed %d: Generate: %v", class, seed, err)
+			}
+			cost := statblock.PointBuyCost(out.BaseStats)
+			if cost != 27 {
+				t.Errorf("%s seed %d: BaseStats point buy cost = %d, want 27 — stats: %+v",
+					class, seed, cost, out.BaseStats)
 			}
 		}
 	}

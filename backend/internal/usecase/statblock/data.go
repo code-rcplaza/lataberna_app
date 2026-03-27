@@ -8,82 +8,32 @@ import (
 
 // classData holds the static class configuration for stat generation.
 type classData struct {
-	hitDie   int
-	baseline domain.Stats
-	armorKey string
+	hitDie        int
+	primaryStat   string // always receives 15 — the class's main stat
+	secondaryStat string // always receives 14 — the class's second priority
+	armorKey      string
 }
 
 // maxDex2 is a pointer to 2, used for medium armor MaxDex cap.
 var maxDex2 = func() *int { v := 2; return &v }()
 
-// classTable holds the baseline stats and armor for all 13 classes.
-// Baselines extracted from mvp-rules.context.md.
+// classTable holds the class priorities and armor for all 13 classes.
+// primaryStat receives 15, secondaryStat receives 14; remaining stats get
+// [13,12,10,8] shuffled randomly — always totalling 27 in point buy cost.
 var classTable = map[domain.Class]classData{
-	domain.ClassBarbarian: {
-		hitDie: 12,
-		baseline: domain.Stats{STR: 15, DEX: 13, CON: 14, INT: 8, WIS: 10, CHA: 12},
-		armorKey: "unarmored-barbarian",
-	},
-	domain.ClassBard: {
-		hitDie: 8,
-		baseline: domain.Stats{STR: 8, DEX: 14, CON: 12, INT: 10, WIS: 13, CHA: 15},
-		armorKey: "leather",
-	},
-	domain.ClassCleric: {
-		hitDie: 8,
-		baseline: domain.Stats{STR: 14, DEX: 8, CON: 13, INT: 10, WIS: 15, CHA: 12},
-		armorKey: "chain-shirt",
-	},
-	domain.ClassDruid: {
-		hitDie: 8,
-		baseline: domain.Stats{STR: 10, DEX: 12, CON: 14, INT: 13, WIS: 15, CHA: 8},
-		armorKey: "chain-shirt",
-	},
-	domain.ClassFighter: {
-		hitDie: 10,
-		baseline: domain.Stats{STR: 15, DEX: 13, CON: 14, INT: 10, WIS: 12, CHA: 8},
-		armorKey: "chain-mail",
-	},
-	domain.ClassMonk: {
-		hitDie: 8,
-		baseline: domain.Stats{STR: 10, DEX: 15, CON: 13, INT: 8, WIS: 14, CHA: 12},
-		armorKey: "unarmored-monk",
-	},
-	domain.ClassPaladin: {
-		hitDie: 10,
-		baseline: domain.Stats{STR: 15, DEX: 8, CON: 13, INT: 10, WIS: 12, CHA: 14},
-		armorKey: "chain-mail",
-	},
-	domain.ClassRanger: {
-		hitDie: 10,
-		baseline: domain.Stats{STR: 12, DEX: 15, CON: 13, INT: 10, WIS: 14, CHA: 8},
-		armorKey: "chain-shirt",
-	},
-	domain.ClassRogue: {
-		hitDie: 8,
-		baseline: domain.Stats{STR: 8, DEX: 15, CON: 12, INT: 14, WIS: 13, CHA: 10},
-		armorKey: "leather",
-	},
-	domain.ClassSorcerer: {
-		hitDie: 6,
-		baseline: domain.Stats{STR: 8, DEX: 13, CON: 14, INT: 12, WIS: 10, CHA: 15},
-		armorKey: "clothes",
-	},
-	domain.ClassWarlock: {
-		hitDie: 8,
-		baseline: domain.Stats{STR: 10, DEX: 14, CON: 13, INT: 12, WIS: 8, CHA: 15},
-		armorKey: "leather",
-	},
-	domain.ClassWizard: {
-		hitDie: 6,
-		baseline: domain.Stats{STR: 8, DEX: 13, CON: 14, INT: 15, WIS: 12, CHA: 10},
-		armorKey: "clothes",
-	},
-	domain.ClassArtificer: {
-		hitDie: 8,
-		baseline: domain.Stats{STR: 10, DEX: 12, CON: 14, INT: 15, WIS: 13, CHA: 8},
-		armorKey: "chain-shirt",
-	},
+	domain.ClassBarbarian: {hitDie: 12, primaryStat: "STR", secondaryStat: "CON", armorKey: "unarmored-barbarian"},
+	domain.ClassBard:      {hitDie: 8,  primaryStat: "CHA", secondaryStat: "DEX", armorKey: "leather"},
+	domain.ClassCleric:    {hitDie: 8,  primaryStat: "WIS", secondaryStat: "STR", armorKey: "chain-shirt"},
+	domain.ClassDruid:     {hitDie: 8,  primaryStat: "WIS", secondaryStat: "CON", armorKey: "chain-shirt"},
+	domain.ClassFighter:   {hitDie: 10, primaryStat: "STR", secondaryStat: "CON", armorKey: "chain-mail"},
+	domain.ClassMonk:      {hitDie: 8,  primaryStat: "DEX", secondaryStat: "WIS", armorKey: "unarmored-monk"},
+	domain.ClassPaladin:   {hitDie: 10, primaryStat: "STR", secondaryStat: "CHA", armorKey: "chain-mail"},
+	domain.ClassRanger:    {hitDie: 10, primaryStat: "DEX", secondaryStat: "WIS", armorKey: "chain-shirt"},
+	domain.ClassRogue:     {hitDie: 8,  primaryStat: "DEX", secondaryStat: "INT", armorKey: "leather"},
+	domain.ClassSorcerer:  {hitDie: 6,  primaryStat: "CHA", secondaryStat: "CON", armorKey: "clothes"},
+	domain.ClassWarlock:   {hitDie: 8,  primaryStat: "CHA", secondaryStat: "DEX", armorKey: "leather"},
+	domain.ClassWizard:    {hitDie: 6,  primaryStat: "INT", secondaryStat: "CON", armorKey: "clothes"},
+	domain.ClassArtificer: {hitDie: 8,  primaryStat: "INT", secondaryStat: "CON", armorKey: "chain-shirt"},
 }
 
 // armorTable holds the ArmorType instances keyed by armor key.

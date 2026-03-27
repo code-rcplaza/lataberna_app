@@ -125,7 +125,7 @@ func generateBaseStats(class domain.Class, rng *rand.Rand) (domain.Stats, error)
 	if !ok {
 		return domain.Stats{}, errUnknownClass(class)
 	}
-	return applyVariation(data.baseline, rng), nil
+	return buildStatsFromPriority(data.primaryStat, data.secondaryStat, rng), nil
 }
 
 func resolveSpeciesBonuses(s domain.Species, sub *domain.SubSpecies) []domain.AbilityBonus {
