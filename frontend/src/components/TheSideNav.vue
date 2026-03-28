@@ -22,23 +22,6 @@ function isActive(to: string): boolean {
 
 <template>
   <aside class="fixed left-0 top-0 h-full flex-col pt-20 pb-8 bg-surface-container-low w-64 z-40 hidden lg:flex">
-    <!-- User profile -->
-    <div class="px-6 mb-8">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 bg-surface-variant rounded-full flex items-center justify-center">
-          <span class="material-symbols-outlined text-secondary">person</span>
-        </div>
-        <div v-if="auth.user">
-          <p class="font-headline text-on-surface text-lg leading-tight">{{ auth.user.email.split('@')[0] }}</p>
-          <p class="font-label uppercase tracking-widest text-[10px] font-semibold text-secondary">Curador</p>
-        </div>
-        <div v-else>
-          <p class="font-headline text-on-surface text-lg leading-tight">Invitado</p>
-          <p class="font-label uppercase tracking-widest text-[10px] font-semibold text-secondary">Sin sesión</p>
-        </div>
-      </div>
-    </div>
-
     <!-- Nav -->
     <nav class="flex-1">
       <ul class="space-y-1">
