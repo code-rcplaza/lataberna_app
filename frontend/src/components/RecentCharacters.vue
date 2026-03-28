@@ -2,10 +2,12 @@
 import { useRouter } from 'vue-router'
 import { useGeneratorHistoryStore } from '@/stores/useGeneratorHistoryStore'
 import { useCharacterStore } from '@/stores/useCharacterStore'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 const router = useRouter()
 const historyStore = useGeneratorHistoryStore()
 const characterStore = useCharacterStore()
+const authStore = useAuthStore()
 
 const speciesLabels: Record<string, string> = {
   human: 'Humano', elf: 'Elfo', dwarf: 'Enano', halfling: 'Mediano', gnome: 'Gnomo',
@@ -44,7 +46,7 @@ function loadOrNavigate(index: number) {
 </script>
 
 <template>
-  <div v-if="historyStore.recent.length > 0" class="space-y-3 pt-4 border-t border-outline-variant/20">
+  <div v-if="authStore.isAuthenticated && historyStore.recent.length > 0" class="space-y-3 pt-4 border-t border-outline-variant/20">
     <p class="text-[10px] font-bold uppercase tracking-widest text-secondary">Últimos generados</p>
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
       <button

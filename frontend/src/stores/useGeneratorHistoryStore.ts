@@ -39,5 +39,10 @@ export const useGeneratorHistoryStore = defineStore('generatorHistory', () => {
     persist(recent.value)
   }
 
-  return { recent, push, rotateIn }
+  function clear() {
+    recent.value = []
+    localStorage.removeItem(STORAGE_KEY)
+  }
+
+  return { recent, push, rotateIn, clear }
 })

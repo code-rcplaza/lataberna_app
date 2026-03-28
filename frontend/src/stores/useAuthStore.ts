@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { User } from '@/types/character'
+import { useGeneratorHistoryStore } from './useGeneratorHistoryStore'
 
 export const useAuthStore = defineStore('auth', () => {
   const sessionId = ref<string | null>(localStorage.getItem('sessionId'))
@@ -18,6 +19,7 @@ export const useAuthStore = defineStore('auth', () => {
     sessionId.value = null
     user.value = null
     localStorage.removeItem('sessionId')
+    useGeneratorHistoryStore().clear()
   }
 
   return { sessionId, user, isAuthenticated, login, logout }
