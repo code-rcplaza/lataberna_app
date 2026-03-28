@@ -8,7 +8,6 @@ const { logout } = useAuthAPI()
 const route = useRoute()
 
 function isActive(to: string): boolean {
-  if (to === '/') return route.path === '/'
   return route.path === to || route.path.startsWith(to + '/')
 }
 </script>
@@ -19,9 +18,9 @@ function isActive(to: string): boolean {
       <span class="text-primary font-headline italic text-2xl">La Taberna RPG</span>
       <nav class="hidden md:flex gap-6">
         <RouterLink
-          to="/"
+          to="/forja"
           class="font-medium transition-colors"
-          :class="isActive('/') ? 'text-primary font-bold underline underline-offset-8' : 'text-on-surface-variant hover:text-on-surface'"
+          :class="isActive('/forja') ? 'text-primary font-bold underline underline-offset-8' : 'text-on-surface-variant hover:text-on-surface'"
         >Forja</RouterLink>
         <RouterLink
           v-if="auth.isAuthenticated"

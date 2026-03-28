@@ -9,7 +9,7 @@ const route = useRoute()
 const router = useRouter()
 
 const navItems = [
-  { label: 'Forja',      icon: 'auto_fix_high',  to: '/',          wip: false, requiresAuth: false },
+  { label: 'Forja',      icon: 'auto_fix_high',  to: '/forja',     wip: false, requiresAuth: false },
   { label: 'Biblioteca', icon: 'library_books', to: '/biblioteca', wip: false, requiresAuth: true  },
   { label: 'Crónicas',   icon: 'auto_stories',  to: null,  wip: true,  requiresAuth: false },
   { label: 'Bestiario',  icon: 'pets',           to: null,  wip: true,  requiresAuth: false },
@@ -17,7 +17,6 @@ const navItems = [
 ]
 
 function isActive(to: string): boolean {
-  if (to === '/') return route.path === '/'
   return route.path === to || route.path.startsWith(to + '/')
 }
 </script>
@@ -83,7 +82,7 @@ function isActive(to: string): boolean {
     <!-- Bottom actions -->
     <div class="px-5 mt-auto border-t border-outline-variant/20 pt-4 space-y-3">
       <button
-        @click="router.push('/')"
+        @click="router.push('/forja')"
         class="w-full bg-primary py-3 text-on-primary font-label uppercase tracking-widest text-xs font-bold hover:bg-primary-container hover:text-on-primary-container transition-colors"
       >
         Nueva Ficha

@@ -7,6 +7,11 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
+      component: () => import('@/views/HomeView.vue'),
+    },
+    {
+      path: '/forja',
+      name: 'forja',
       component: () => import('@/views/GeneratorView.vue'),
     },
     {
