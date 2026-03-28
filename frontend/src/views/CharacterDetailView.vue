@@ -16,10 +16,17 @@ const editError = ref<string | null>(null)
 const editSuccess = ref(false)
 const showDeleteModal = ref(false)
 
-// Edit state
+// Name edit state
 const editingName = ref(false)
 const nameInput = ref('')
 const nameValidationError = ref<string | null>(null)
+
+// Narrative edit state
+type NarrativeKey = 'background' | 'motivation' | 'secret'
+const editingBlock = ref<NarrativeKey | null>(null)
+const narrativeInput = ref('')
+const narrativeValidationError = ref<string | null>(null)
+const narrativeSuccess = ref<NarrativeKey | null>(null)
 
 const statKeys = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'] as const
 
@@ -92,6 +99,41 @@ function cancelEditName() {
   editingName.value = false
   nameInput.value = ''
   nameValidationError.value = null
+}
+
+function startEditNarrative(key: NarrativeKey) {
+  if (!libraryStore.selected) return
+  narrativeInput.value = libraryStore.selected[key].content
+  narrativeValidationError.value = null
+  editError.value = null
+  narrativeSuccess.value = null
+  editingBlock.value = key
+}
+
+function cancelEditNarrative() {
+  editingBlock.value = null
+  narrativeInput.value = ''
+  narrativeValidationError.value = null
+}
+
+async function submitEditNarrative() {
+  const block = editingBlock.value
+  if (!block || !libraryStore.selected) return
+  const trimmed = narrativeInput.value.trim()
+  if (!trimmed) {
+    narrativeValidationError.value = 'El contenido no puede estar vacío.'
+    return
+  }
+  narrativeValidationError.value = null
+  editError.value = null
+  try {
+    await editCharacter(libraryStore.selected.id, { [block]: trimmed })
+    editingBlock.value = null
+    narrativeSuccess.value = block
+    setTimeout(() => { narrativeSuccess.value = null }, 3000)
+  } catch (err) {
+    editError.value = err instanceof Error ? err.message : 'Error al editar el personaje'
+  }
 }
 
 async function submitEditName() {
@@ -251,15 +293,66 @@ async function submitEditName() {
         <div
           v-for="blockKey in (['background', 'motivation', 'secret'] as const)"
           :key="blockKey"
-          class="space-y-2"
         >
           <div class="border-t border-outline-variant/20 pt-4 first:border-t-0 first:pt-0">
-            <p class="text-[10px] font-bold uppercase tracking-widest text-secondary mb-2">
-              {{ narrativeTitles[blockKey] }}
-            </p>
-            <p class="font-body text-on-surface text-sm leading-relaxed">
+            <!-- Label row -->
+            <div class="flex items-center gap-2 mb-2">
+              <p class="text-[10px] font-bold uppercase tracking-widest text-secondary">
+                {{ narrativeTitles[blockKey] }}
+              </p>
+              <button
+                v-if="editingBlock !== blockKey"
+                @click="startEditNarrative(blockKey)"
+                class="text-outline hover:text-primary transition-colors"
+                title="Editar"
+              >
+                <span class="material-symbols-outlined text-sm leading-none">edit</span>
+              </button>
+              <span
+                v-if="narrativeSuccess === blockKey"
+                class="text-[10px] font-label font-semibold text-primary uppercase tracking-widest"
+              >
+                ¡Guardado!
+              </span>
+            </div>
+
+            <!-- Read mode -->
+            <p
+              v-if="editingBlock !== blockKey"
+              class="font-body text-on-surface text-sm leading-relaxed"
+            >
               {{ libraryStore.selected[blockKey].content }}
             </p>
+
+            <!-- Edit mode -->
+            <div v-else class="flex flex-col gap-2">
+              <textarea
+                v-model="narrativeInput"
+                rows="4"
+                class="w-full bg-surface-container border border-outline-variant text-on-surface text-sm px-3 py-2 focus:outline-none focus:border-primary resize-none leading-relaxed"
+                @keyup.escape="cancelEditNarrative"
+              />
+              <p v-if="narrativeValidationError" class="text-error text-xs font-label">
+                {{ narrativeValidationError }}
+              </p>
+              <div class="flex items-center gap-2">
+                <button
+                  @click="submitEditNarrative"
+                  :disabled="libraryStore.isLoading"
+                  class="flex items-center gap-1 px-3 py-1 bg-primary text-on-primary font-label font-bold uppercase tracking-widest text-xs hover:bg-primary-container hover:text-on-primary-container transition-colors disabled:opacity-50"
+                >
+                  <span class="material-symbols-outlined text-sm">check</span>
+                  Guardar
+                </button>
+                <button
+                  @click="cancelEditNarrative"
+                  class="flex items-center gap-1 px-3 py-1 border border-outline-variant text-secondary font-label font-bold uppercase tracking-widest text-xs hover:border-outline hover:text-on-surface transition-colors"
+                >
+                  <span class="material-symbols-outlined text-sm">close</span>
+                  Cancelar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
