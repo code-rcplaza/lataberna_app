@@ -115,7 +115,10 @@ export function useCharacterAPI() {
         auth.sessionId,
       )
       // Push current to history before replacing it with the new character.
-      if (store.current) {
+      // Skip if we're re-generating with the same seed — same seed = same character,
+      // adding it again would create duplicates in the history.
+      const isRepeatSeed = store.input.seed !== undefined && store.current?.seed === store.input.seed
+      if (store.current && !isRepeatSeed) {
         historyStore.push(store.current, store.isSaved)
       }
       store.setCharacter(data.generateCharacter)
