@@ -303,10 +303,10 @@ async function submitEditName() {
               <button
                 v-if="editingBlock !== blockKey"
                 @click="startEditNarrative(blockKey)"
-                class="text-outline hover:text-primary transition-colors"
+                class="text-secondary hover:text-primary transition-colors"
                 title="Editar"
               >
-                <span class="material-symbols-outlined text-sm leading-none">edit</span>
+                <span class="material-symbols-outlined text-base">edit</span>
               </button>
               <span
                 v-if="narrativeSuccess === blockKey"
