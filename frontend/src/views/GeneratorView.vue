@@ -79,13 +79,6 @@ function exportJSON() {
       <div v-if="authStore.isAuthenticated && characterStore.current" class="flex flex-col gap-2 pt-2">
         <div class="flex items-center gap-4">
           <button
-            @click="exportJSON"
-            class="flex items-center gap-2 px-4 py-2 border border-outline-variant text-secondary font-label font-bold uppercase tracking-widest text-xs hover:border-primary hover:text-primary transition-colors"
-          >
-            <span class="material-symbols-outlined text-sm">download</span>
-            Exportar JSON
-          </button>
-          <button
             @click="handleSave"
             :disabled="isSaveDisabled()"
             class="flex items-center gap-2 px-5 py-2 bg-primary text-on-primary font-label font-bold uppercase tracking-widest text-xs hover:bg-primary-container hover:text-on-primary-container transition-colors disabled:opacity-60 disabled:cursor-not-allowed"

@@ -81,12 +81,6 @@ function isActive(to: string): boolean {
 
     <!-- Bottom actions -->
     <div class="px-5 mt-auto border-t border-outline-variant/20 pt-4 space-y-3">
-      <button
-        @click="router.push('/forja')"
-        class="w-full bg-primary py-3 text-on-primary font-label uppercase tracking-widest text-xs font-bold hover:bg-primary-container hover:text-on-primary-container transition-colors"
-      >
-        Nueva Ficha
-      </button>
       <div class="flex items-center gap-3 text-outline text-xs font-semibold uppercase tracking-widest px-1 cursor-not-allowed opacity-50">
         <span class="material-symbols-outlined text-sm">help_center</span>
         <span>Soporte</span>
