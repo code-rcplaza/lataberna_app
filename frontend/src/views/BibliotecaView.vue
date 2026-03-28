@@ -57,13 +57,13 @@ function goToDetail(id: string) {
     <!-- Empty state -->
     <div v-else-if="libraryStore.characters.length === 0" class="flex flex-col items-center justify-center py-24 gap-4">
       <span class="material-symbols-outlined text-outline text-6xl">library_books</span>
-      <p class="text-on-surface font-headline text-xl">No tenés personajes guardados aún</p>
-      <p class="text-outline text-sm">Generá uno y guardalo para verlo acá.</p>
+      <p class="text-on-surface font-headline text-xl">No tienes personajes guardados aún</p>
+      <p class="text-outline text-sm">Genera uno y guárdalo para verlo aquí.</p>
       <RouterLink
         to="/forja"
         class="mt-2 bg-primary text-on-primary px-6 py-2 font-label font-bold uppercase tracking-widest text-xs hover:bg-primary-container hover:text-on-primary-container transition-colors"
       >
-        Generá tu primer personaje
+        Genera tu primer personaje
       </RouterLink>
     </div>
 

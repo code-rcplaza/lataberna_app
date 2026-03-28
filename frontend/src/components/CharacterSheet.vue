@@ -75,9 +75,9 @@ function proficiencyBonus(level: number): string {
     class="flex flex-col items-center justify-center min-h-[600px] text-center space-y-4 opacity-40"
   >
     <span class="material-symbols-outlined text-6xl text-outline">auto_stories</span>
-    <p class="font-headline text-2xl text-on-surface-variant italic">Generá tu primer personaje</p>
+    <p class="font-headline text-2xl text-on-surface-variant italic">Genera tu primer personaje</p>
     <p class="font-body text-sm text-outline max-w-xs">
-      Configurá los parámetros a la izquierda y hacé clic en "¡Sorpréndeme!" para dar vida a un aventurero.
+      Configura los parámetros a la izquierda y haz clic en "¡Sorpréndeme!" para dar vida a un aventurero.
     </p>
     <button
       @click="generate()"

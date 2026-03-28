@@ -37,7 +37,7 @@ function reset() {
       <!-- Estado: idle / loading / error — formulario de email -->
       <template v-if="state !== 'sent'">
         <h1 class="font-headline text-4xl font-bold text-on-surface leading-tight">
-          Accedé con tu correo
+          Accede con tu correo
         </h1>
 
         <form @submit.prevent="submit" class="space-y-4">
@@ -60,7 +60,7 @@ function reset() {
             class="w-full bg-primary text-on-primary font-label font-bold uppercase tracking-widest py-4 text-sm hover:bg-primary-container transition-colors disabled:opacity-60"
           >
             <span v-if="state === 'loading'">Enviando…</span>
-            <span v-else>Recibí mi enlace</span>
+            <span v-else>Recibe mi enlace</span>
           </button>
         </form>
 
@@ -72,7 +72,7 @@ function reset() {
       <!-- Estado: sent — confirmación -->
       <template v-else>
         <h1 class="font-headline text-4xl font-bold text-on-surface leading-tight">
-          Revisá tu correo
+          Revisa tu correo
         </h1>
 
         <p class="font-body text-on-surface-variant text-sm leading-relaxed">

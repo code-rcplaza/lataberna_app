@@ -86,7 +86,7 @@ const isSaveDisabled = () =>
           class="inline-flex items-center gap-2 px-5 py-2 border border-outline-variant text-on-surface-variant font-label font-semibold uppercase tracking-widest text-xs hover:border-outline hover:text-on-surface transition-colors"
         >
           <span class="material-symbols-outlined text-sm">lock</span>
-          Iniciá sesión para guardar tu personaje
+          Inicia sesión para guardar tu personaje
         </RouterLink>
       </div>
 

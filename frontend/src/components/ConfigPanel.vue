@@ -89,7 +89,7 @@ function fieldClass(locked: boolean) {
     <!-- Panel header -->
     <div class="border-b border-outline-variant/30 pb-4">
       <h2 class="font-headline text-2xl font-bold text-on-surface">Escritorio de Encarnación</h2>
-      <p class="text-xs text-secondary mt-1 font-body">Configurá los parámetros del personaje antes de generar</p>
+      <p class="text-xs text-secondary mt-1 font-body">Configura los parámetros del personaje antes de generar</p>
     </div>
 
     <!-- Especie -->

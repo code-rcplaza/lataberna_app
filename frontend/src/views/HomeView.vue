@@ -56,21 +56,21 @@ const auth = useAuthStore()
         <span class="material-symbols-outlined text-primary text-3xl">casino</span>
         <h3 class="font-headline text-on-surface text-lg">Todo aleatorio</h3>
         <p class="text-on-surface-variant text-sm leading-relaxed">
-          Sin configurar nada obtenés un personaje completo. Un click, listo para jugar.
+          Sin configurar nada obtienes un personaje completo. Un click, listo para jugar.
         </p>
       </div>
       <div class="flex flex-col gap-3">
         <span class="material-symbols-outlined text-primary text-3xl">lock</span>
         <h3 class="font-headline text-on-surface text-lg">Control total</h3>
         <p class="text-on-surface-variant text-sm leading-relaxed">
-          Bloqueá lo que te gusta y regenerá el resto. Nombre, stats y narrativa de forma independiente.
+          Bloquea lo que te gusta y regenera el resto. Nombre, stats y narrativa de forma independiente.
         </p>
       </div>
       <div class="flex flex-col gap-3">
         <span class="material-symbols-outlined text-primary text-3xl">library_books</span>
         <h3 class="font-headline text-on-surface text-lg">Tu biblioteca</h3>
         <p class="text-on-surface-variant text-sm leading-relaxed">
-          Guardá tus personajes y NPCs favoritos. Accedé, editá y reutilizalos en cualquier sesión.
+          Guarda tus personajes y NPCs favoritos. Accede, edítalos y reutilízalos en cualquier sesión.
         </p>
       </div>
     </section>
