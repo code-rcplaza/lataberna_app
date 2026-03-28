@@ -36,9 +36,12 @@ export const useCharacterStore = defineStore('character', () => {
     isSaved.value = false
   }
 
-  function markSaved() {
+  // Updates current with the persisted library character (which has the library ID).
+  // Called after a successful saveCharacter — preserves the library ID for history navigation.
+  function setSaved(c: Character) {
+    current.value = c
     isSaved.value = true
   }
 
-  return { current, isLoading, isSaved, input, locks, toggleLock, setCharacter, markSaved }
+  return { current, isLoading, isSaved, input, locks, toggleLock, setCharacter, setSaved }
 })

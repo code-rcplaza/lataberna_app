@@ -1,6 +1,7 @@
 import { useCharacterStore } from '@/stores/useCharacterStore'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useLibraryStore } from '@/stores/useLibraryStore'
+import { useGeneratorHistoryStore } from '@/stores/useGeneratorHistoryStore'
 import { gql } from './useGraphQL'
 import type { Character, EditCharacterInput } from '@/types/character'
 
@@ -96,6 +97,7 @@ const EDIT_CHARACTER = `
 export function useCharacterAPI() {
   const store = useCharacterStore()
   const auth = useAuthStore()
+  const historyStore = useGeneratorHistoryStore()
 
   async function generate() {
     store.isLoading = true
@@ -112,6 +114,10 @@ export function useCharacterAPI() {
         { input },
         auth.sessionId,
       )
+      // Push current to history before replacing it with the new character.
+      if (store.current) {
+        historyStore.push(store.current, store.isSaved)
+      }
       store.setCharacter(data.generateCharacter)
     } finally {
       store.isLoading = false
@@ -224,7 +230,7 @@ export function useLibraryAPI() {
         auth.sessionId,
       )
       libraryStore.addCharacter(data.saveCharacter)
-      characterStore.markSaved()
+      characterStore.setSaved(data.saveCharacter)
     } catch (err) {
       libraryStore.error = err instanceof Error ? err.message : 'Error al guardar el personaje'
       throw err

@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import ConfigPanel from '@/components/ConfigPanel.vue'
 import CharacterSheet from '@/components/CharacterSheet.vue'
+import RecentCharacters from '@/components/RecentCharacters.vue'
 import { useCharacterStore } from '@/stores/useCharacterStore'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useLibraryStore } from '@/stores/useLibraryStore'
@@ -106,6 +107,9 @@ function exportJSON() {
           Iniciá sesión para guardar tu personaje
         </RouterLink>
       </div>
+
+      <!-- Historial de la sesión -->
+      <RecentCharacters />
     </div>
   </div>
 </template>
