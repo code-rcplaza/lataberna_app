@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLibraryStore } from '@/stores/useLibraryStore'
 import { useLibraryAPI } from '@/composables/useCharacterAPI'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 import type { EditCharacterInput } from '@/types/character'
 
 const route = useRoute()
@@ -13,6 +14,7 @@ const { getCharacter, deleteCharacter, editCharacter } = useLibraryAPI()
 const deleteError = ref<string | null>(null)
 const editError = ref<string | null>(null)
 const editSuccess = ref(false)
+const showDeleteModal = ref(false)
 
 // Edit state
 const editingName = ref(false)
@@ -64,11 +66,10 @@ onMounted(async () => {
   }
 })
 
-async function handleDelete() {
+async function confirmDelete() {
   const character = libraryStore.selected
   if (!character) return
-  const confirmed = window.confirm(`¿Eliminar a ${character.name}? Esta acción es irreversible.`)
-  if (!confirmed) return
+  showDeleteModal.value = false
   deleteError.value = null
   try {
     await deleteCharacter(character.id)
@@ -278,7 +279,7 @@ async function submitEditName() {
           Volver
         </RouterLink>
         <button
-          @click="handleDelete"
+          @click="showDeleteModal = true"
           :disabled="libraryStore.isLoading"
           class="flex items-center gap-2 px-4 py-2 border border-error text-error font-label font-bold uppercase tracking-widest text-xs hover:bg-error hover:text-on-error transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
@@ -288,4 +289,12 @@ async function submitEditName() {
       </div>
     </div>
   </div>
+
+  <ConfirmModal
+    :open="showDeleteModal"
+    title="Eliminar personaje"
+    :message="`¿Eliminar a ${libraryStore.selected?.name}? Esta acción es irreversible.`"
+    @confirm="confirmDelete"
+    @cancel="showDeleteModal = false"
+  />
 </template>
