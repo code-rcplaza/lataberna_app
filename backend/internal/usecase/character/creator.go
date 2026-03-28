@@ -182,11 +182,14 @@ func (c *Creator) Regenerate(ctx context.Context, in RegenerateInput) (*domain.C
 }
 
 // resolveSeed returns the provided seed or a random one based on current time.
+// Auto-generated seeds are clamped to int32 range to prevent precision loss when
+// serialized through GraphQL Int (32-bit) and parsed by JavaScript (float64).
+// UnixNano values (~1.7e18) exceed Number.MAX_SAFE_INTEGER, making round-trips lossy.
 func resolveSeed(s *int64) int64 {
 	if s != nil {
 		return *s
 	}
-	return time.Now().UnixNano()
+	return time.Now().UnixNano() % (1<<31 - 1)
 }
 
 // newID generates a simple unique ID for the character.

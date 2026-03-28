@@ -443,6 +443,33 @@ func TestCreate_LocksAllFalseOnCreation(t *testing.T) {
 	}
 }
 
+// --- Test: auto-generated seed fits within int32 range (GraphQL Int / JS safe integer) ---
+// Regression: UnixNano seeds (~1.7e18) exceed Number.MAX_SAFE_INTEGER in JavaScript,
+// causing precision loss when the seed is round-tripped through the UI.
+// The fix: auto seeds are clamped to int32 range (0..2^31-2).
+
+func TestCreate_AutoSeed_FitsInt32Range(t *testing.T) {
+	creator := newTestCreator()
+	const maxInt32 = int64(1<<31 - 1)
+
+	for i := range 20 {
+		out, err := creator.Create(context.Background(), character.CreateInput{})
+		if err != nil {
+			t.Fatalf("iteration %d: unexpected error: %v", i, err)
+		}
+		if out.Seed == nil {
+			t.Fatalf("iteration %d: expected non-nil seed", i)
+		}
+		if *out.Seed >= maxInt32 {
+			t.Errorf("iteration %d: seed %d exceeds int32 max %d — will lose precision in JavaScript",
+				i, *out.Seed, maxInt32)
+		}
+		if *out.Seed < 0 {
+			t.Errorf("iteration %d: seed %d is negative", i, *out.Seed)
+		}
+	}
+}
+
 // --- Test: provided gender produces coherent name ---
 
 func TestCreate_ProvidedGender_CoherentName(t *testing.T) {
