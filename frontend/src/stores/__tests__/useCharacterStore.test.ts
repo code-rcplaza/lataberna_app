@@ -14,6 +14,7 @@ function makeCharacter(overrides: Partial<Character> = {}): Character {
     ruleset: '5e',
     abilityBonusSource: 'species',
     seed: 12345,
+    createdAt: '2026-01-01T00:00:00Z',
     baseStats:  { STR: 15, DEX: 10, CON: 14, INT: 8, WIS: 12, CHA: 9 },
     finalStats: { STR: 15, DEX: 10, CON: 16, INT: 8, WIS: 12, CHA: 9 },
     modifiers:  { STR: 2,  DEX: 0,  CON: 3,  INT: -1, WIS: 1, CHA: -1 },
