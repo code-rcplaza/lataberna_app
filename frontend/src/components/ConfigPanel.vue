@@ -223,7 +223,7 @@ function fieldClass(locked: boolean) {
     <!-- Flavor note -->
     <div class="border-l-2 border-primary-container/40 pl-4 py-2 bg-surface-container rounded-sm">
       <p class="text-xs text-on-surface-variant font-body italic leading-relaxed">
-        "Cada alma nace del caos y el azar. Los dados dicen quién sos — vos decidís en qué te convertís."
+        "Cada alma nace del caos y el azar. Los dados dicen quién eres — tú decides en qué te conviertes."
       </p>
     </div>
   </div>
