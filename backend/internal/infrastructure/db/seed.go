@@ -105,9 +105,35 @@ func seedNarrativeV2(ctx context.Context, db *sql.DB) error {
 	return nil
 }
 
+// namePatch describes a set of name pool replacements to apply atomically.
+// Adding a new content version = adding one entry to namePatches, no new functions.
+// components: speciesKey → nameType → gender → names (DELETE by species+nameType)
+// firstNames: speciesKey → gender → names    (DELETE by species+gender, nameType = "first_name")
+type namePatch struct {
+	version    int
+	components map[string]map[string]map[string][]string
+	firstNames map[string]map[string][]string
+}
+
+// namePatches is the ordered list of content patches applied after v1/v2 bootstrap.
+// To add a new version: append a new namePatch entry and add the data functions below.
+var namePatches = []namePatch{
+	{
+		version:    3,
+		components: nameSeedDataV3Components(),
+		firstNames: nameSeedDataV3FirstNames(),
+	},
+	{
+		version:    4,
+		components: nameSeedDataV4Components(),
+		firstNames: nameSeedDataV4FirstNames(),
+	},
+}
+
 // seedNamesByVersion seeds name_entries in phases based on seed_version.
 // Phase 1 (version < 1): first_name rows for all 9 species.
 // Phase 2 (version < 2): name component rows (surnames, clan names, etc.).
+// Phase 3+ (version < N): content corrections via namePatches registry.
 // INSERT OR IGNORE makes each phase safe to retry.
 func seedNamesByVersion(ctx context.Context, db *sql.DB) error {
 	var version int
@@ -125,170 +151,99 @@ func seedNamesByVersion(ctx context.Context, db *sql.DB) error {
 			return fmt.Errorf("seedNamesByVersion: v2: %w", err)
 		}
 	}
-	if version < 3 {
-		if err := seedNamesV3(ctx, db); err != nil {
-			return fmt.Errorf("seedNamesByVersion: v3: %w", err)
-		}
-	}
-	if version < 4 {
-		if err := seedNamesV4(ctx, db); err != nil {
-			return fmt.Errorf("seedNamesByVersion: v4: %w", err)
+
+	for _, p := range namePatches {
+		if version < p.version {
+			if err := applyNamePatch(ctx, db, p); err != nil {
+				return fmt.Errorf("seedNamesByVersion: patch v%d: %w", p.version, err)
+			}
 		}
 	}
 	return nil
 }
 
-func seedNamesV3(ctx context.Context, db *sql.DB) error {
+// applyNamePatch applies a single namePatch atomically: DELETE affected pools, INSERT new entries,
+// then bump seed_version. The version bump happens outside the transaction (same pattern as v1/v2).
+func applyNamePatch(ctx context.Context, db *sql.DB, p namePatch) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("seedNamesV3: begin: %w", err)
+		return fmt.Errorf("applyNamePatch v%d: begin: %w", p.version, err)
 	}
 	defer tx.Rollback() //nolint:errcheck
 
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 
-	// ---- Phase A: replace V2 component pools ----
-	compStmt, err := tx.PrepareContext(ctx,
-		`INSERT OR IGNORE INTO name_entries (id, species_key, gender, name_type, name, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
-	if err != nil {
-		return fmt.Errorf("seedNamesV3: prepare component stmt: %w", err)
-	}
-	defer compStmt.Close()
+	// ---- component pools (family_name, surname, clan_name, etc.) ----
+	if len(p.components) > 0 {
+		compStmt, err := tx.PrepareContext(ctx,
+			`INSERT OR IGNORE INTO name_entries (id, species_key, gender, name_type, name, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
+		if err != nil {
+			return fmt.Errorf("applyNamePatch v%d: prepare component stmt: %w", p.version, err)
+		}
+		defer compStmt.Close()
 
-	compIdx := 0
-	for speciesKey, typeMap := range nameSeedDataV3Components() {
-		for nameType, genderMap := range typeMap {
-			if _, err := tx.ExecContext(ctx,
-				`DELETE FROM name_entries WHERE species_key = ? AND name_type = ?`,
-				speciesKey, nameType); err != nil {
-				return fmt.Errorf("seedNamesV3: delete pool %q/%q: %w", speciesKey, nameType, err)
-			}
-			for gender, names := range genderMap {
-				for _, name := range names {
-					compIdx++
-					id := fmt.Sprintf("name-v3c-%05d", compIdx)
-					if _, err := compStmt.ExecContext(ctx, id, speciesKey, gender, nameType, name, now); err != nil {
-						return fmt.Errorf("seedNamesV3: insert component %q %q %q %q: %w",
-							speciesKey, nameType, gender, name, err)
+		compIdx := 0
+		for speciesKey, typeMap := range p.components {
+			for nameType, genderMap := range typeMap {
+				if _, err := tx.ExecContext(ctx,
+					`DELETE FROM name_entries WHERE species_key = ? AND name_type = ?`,
+					speciesKey, nameType); err != nil {
+					return fmt.Errorf("applyNamePatch v%d: delete pool %q/%q: %w", p.version, speciesKey, nameType, err)
+				}
+				for gender, names := range genderMap {
+					for _, name := range names {
+						compIdx++
+						id := fmt.Sprintf("name-v%dc-%05d", p.version, compIdx)
+						if _, err := compStmt.ExecContext(ctx, id, speciesKey, gender, nameType, name, now); err != nil {
+							return fmt.Errorf("applyNamePatch v%d: insert component %q %q %q %q: %w",
+								p.version, speciesKey, nameType, gender, name, err)
+						}
 					}
 				}
 			}
 		}
 	}
 
-	// ---- Phase B: replace V1 first_name pools ----
-	fnStmt, err := tx.PrepareContext(ctx,
-		`INSERT OR IGNORE INTO name_entries (id, species_key, gender, name_type, name, created_at) VALUES (?, ?, ?, 'first_name', ?, ?)`)
-	if err != nil {
-		return fmt.Errorf("seedNamesV3: prepare first_name stmt: %w", err)
-	}
-	defer fnStmt.Close()
-
-	fnIdx := 0
-	for speciesKey, genderMap := range nameSeedDataV3FirstNames() {
-		for gender, names := range genderMap {
-			if _, err := tx.ExecContext(ctx,
-				`DELETE FROM name_entries WHERE species_key = ? AND name_type = 'first_name' AND gender = ?`,
-				speciesKey, gender); err != nil {
-				return fmt.Errorf("seedNamesV3: delete first_name pool %q/%q: %w", speciesKey, gender, err)
-			}
-			for _, name := range names {
-				fnIdx++
-				id := fmt.Sprintf("name-v3f-%05d", fnIdx)
-				if _, err := fnStmt.ExecContext(ctx, id, speciesKey, gender, name, now); err != nil {
-					return fmt.Errorf("seedNamesV3: insert first_name %q %q %q: %w",
-						speciesKey, gender, name, err)
-				}
-			}
+	// ---- first_name pools ----
+	if len(p.firstNames) > 0 {
+		fnStmt, err := tx.PrepareContext(ctx,
+			`INSERT OR IGNORE INTO name_entries (id, species_key, gender, name_type, name, created_at) VALUES (?, ?, ?, 'first_name', ?, ?)`)
+		if err != nil {
+			return fmt.Errorf("applyNamePatch v%d: prepare first_name stmt: %w", p.version, err)
 		}
-	}
+		defer fnStmt.Close()
 
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	_, err = db.ExecContext(ctx, `UPDATE seed_version SET version = 3 WHERE id = 1`)
-	return err
-}
-
-// seedNamesV4 replaces 5 pools corrected after v3:
-//   - wood-elf family_name: Spanish compounds → neutral elvish proper nouns
-//   - lightfoot surname: simple words → compound descriptive (Ollacaliente style)
-//   - stout surname: simple words → compound descriptive (Barrilhondo style)
-//   - mountain-dwarf first_name male: English-rooted → Germanic/Nordic
-//   - mountain-dwarf first_name female: English-rooted → Germanic/Nordic
-func seedNamesV4(ctx context.Context, db *sql.DB) error {
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("seedNamesV4: begin: %w", err)
-	}
-	defer tx.Rollback() //nolint:errcheck
-
-	now := time.Now().UTC().Format(time.RFC3339Nano)
-
-	// ---- Phase A: component pools (family_name / surname) ----
-	compStmt, err := tx.PrepareContext(ctx,
-		`INSERT OR IGNORE INTO name_entries (id, species_key, gender, name_type, name, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
-	if err != nil {
-		return fmt.Errorf("seedNamesV4: prepare component stmt: %w", err)
-	}
-	defer compStmt.Close()
-
-	compIdx := 0
-	for speciesKey, typeMap := range nameSeedDataV4Components() {
-		for nameType, genderMap := range typeMap {
-			if _, err := tx.ExecContext(ctx,
-				`DELETE FROM name_entries WHERE species_key = ? AND name_type = ?`,
-				speciesKey, nameType); err != nil {
-				return fmt.Errorf("seedNamesV4: delete pool %q/%q: %w", speciesKey, nameType, err)
-			}
+		fnIdx := 0
+		for speciesKey, genderMap := range p.firstNames {
 			for gender, names := range genderMap {
+				if _, err := tx.ExecContext(ctx,
+					`DELETE FROM name_entries WHERE species_key = ? AND name_type = 'first_name' AND gender = ?`,
+					speciesKey, gender); err != nil {
+					return fmt.Errorf("applyNamePatch v%d: delete first_name pool %q/%q: %w", p.version, speciesKey, gender, err)
+				}
 				for _, name := range names {
-					compIdx++
-					id := fmt.Sprintf("name-v4c-%05d", compIdx)
-					if _, err := compStmt.ExecContext(ctx, id, speciesKey, gender, nameType, name, now); err != nil {
-						return fmt.Errorf("seedNamesV4: insert component %q %q %q %q: %w",
-							speciesKey, nameType, gender, name, err)
+					fnIdx++
+					id := fmt.Sprintf("name-v%df-%05d", p.version, fnIdx)
+					if _, err := fnStmt.ExecContext(ctx, id, speciesKey, gender, name, now); err != nil {
+						return fmt.Errorf("applyNamePatch v%d: insert first_name %q %q %q: %w",
+							p.version, speciesKey, gender, name, err)
 					}
 				}
 			}
 		}
 	}
 
-	// ---- Phase B: first_name pools (mountain-dwarf) ----
-	fnStmt, err := tx.PrepareContext(ctx,
-		`INSERT OR IGNORE INTO name_entries (id, species_key, gender, name_type, name, created_at) VALUES (?, ?, ?, 'first_name', ?, ?)`)
-	if err != nil {
-		return fmt.Errorf("seedNamesV4: prepare first_name stmt: %w", err)
-	}
-	defer fnStmt.Close()
-
-	fnIdx := 0
-	for speciesKey, genderMap := range nameSeedDataV4FirstNames() {
-		for gender, names := range genderMap {
-			if _, err := tx.ExecContext(ctx,
-				`DELETE FROM name_entries WHERE species_key = ? AND name_type = 'first_name' AND gender = ?`,
-				speciesKey, gender); err != nil {
-				return fmt.Errorf("seedNamesV4: delete first_name pool %q/%q: %w", speciesKey, gender, err)
-			}
-			for _, name := range names {
-				fnIdx++
-				id := fmt.Sprintf("name-v4f-%05d", fnIdx)
-				if _, err := fnStmt.ExecContext(ctx, id, speciesKey, gender, name, now); err != nil {
-					return fmt.Errorf("seedNamesV4: insert first_name %q %q %q: %w",
-						speciesKey, gender, name, err)
-				}
-			}
-		}
-	}
-
 	if err := tx.Commit(); err != nil {
-		return err
+		return fmt.Errorf("applyNamePatch v%d: commit: %w", p.version, err)
 	}
 
-	_, err = db.ExecContext(ctx, `UPDATE seed_version SET version = 4 WHERE id = 1`)
-	return err
+	if _, err := db.ExecContext(ctx,
+		`UPDATE seed_version SET version = ? WHERE id = 1`, p.version); err != nil {
+		return fmt.Errorf("applyNamePatch v%d: bump version: %w", p.version, err)
+	}
+	return nil
 }
+
 
 // nameSeedDataV4Components returns the 3 component pools corrected in v4.
 // Key structure: speciesKey → nameType → gender → names.
