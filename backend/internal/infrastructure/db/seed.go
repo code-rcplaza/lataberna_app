@@ -34,6 +34,7 @@ func SeedContentIfEmpty(ctx context.Context, db *sql.DB) error {
 
 // seedNarrativeByVersion seeds or re-seeds narrative_entries based on narrative_version.
 // Version 2: replaces voseo (Rioplatense) with tuteo (neutral Spanish).
+// Version 3: re-applies full dataset to ensure species/class compat rows are up to date.
 func seedNarrativeByVersion(ctx context.Context, db *sql.DB) error {
 	var narrativeVersion int
 	if err := db.QueryRowContext(ctx,
@@ -45,6 +46,12 @@ func seedNarrativeByVersion(ctx context.Context, db *sql.DB) error {
 	if narrativeVersion < 2 {
 		if err := seedNarrativeV2(ctx, db); err != nil {
 			return fmt.Errorf("seedNarrativeByVersion: v2: %w", err)
+		}
+	}
+
+	if narrativeVersion < 3 {
+		if err := seedNarrativeV3(ctx, db); err != nil {
+			return fmt.Errorf("seedNarrativeByVersion: v3: %w", err)
 		}
 	}
 
@@ -100,6 +107,61 @@ func seedNarrativeV2(ctx context.Context, db *sql.DB) error {
 		`UPDATE seed_version SET narrative_version = 2 WHERE id = 1`,
 	); err != nil {
 		return fmt.Errorf("seedNarrativeV2: bump version: %w", err)
+	}
+
+	return nil
+}
+
+// seedNarrativeV3 re-applies the full narrative dataset to ensure all species/class
+// compatibility rows reflect the current narrativeSeedData(). Needed when compat data
+// is added or corrected after V2 already ran on existing databases.
+func seedNarrativeV3(ctx context.Context, db *sql.DB) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("seedNarrativeV3: begin: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM narrative_entries`); err != nil {
+		return fmt.Errorf("seedNarrativeV3: delete: %w", err)
+	}
+
+	entryStmt, err := tx.PrepareContext(ctx,
+		`INSERT INTO narrative_entries (id, category, content, created_at) VALUES (?, ?, ?, ?)`)
+	if err != nil {
+		return fmt.Errorf("seedNarrativeV3: prepare entry: %w", err)
+	}
+	defer entryStmt.Close()
+
+	compatStmt, err := tx.PrepareContext(ctx,
+		`INSERT OR IGNORE INTO narrative_compatibility (entry_id, dimension, value, group_name) VALUES (?, ?, ?, ?)`)
+	if err != nil {
+		return fmt.Errorf("seedNarrativeV3: prepare compat: %w", err)
+	}
+	defer compatStmt.Close()
+
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+
+	for i, entry := range narrativeSeedData() {
+		id := fmt.Sprintf("narr-%04d", i+1)
+		if _, err := entryStmt.ExecContext(ctx, id, entry.category, entry.content, now); err != nil {
+			return fmt.Errorf("seedNarrativeV3: insert entry %d: %w", i, err)
+		}
+		for _, c := range entry.compat {
+			if _, err := compatStmt.ExecContext(ctx, id, c.dimension, c.value, c.group); err != nil {
+				return fmt.Errorf("seedNarrativeV3: insert compat %d: %w", i, err)
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("seedNarrativeV3: commit: %w", err)
+	}
+
+	if _, err := db.ExecContext(ctx,
+		`UPDATE seed_version SET narrative_version = 3 WHERE id = 1`,
+	); err != nil {
+		return fmt.Errorf("seedNarrativeV3: bump version: %w", err)
 	}
 
 	return nil

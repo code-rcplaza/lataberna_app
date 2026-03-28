@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"forge-rpg/internal/domain"
 	infradb "forge-rpg/internal/infrastructure/db"
 )
 
@@ -77,6 +78,52 @@ func TestSeedContentIfEmpty_AllCategoriesPresent(t *testing.T) {
 		db.QueryRowContext(ctx, `SELECT COUNT(*) FROM narrative_entries WHERE category = ?`, cat).Scan(&n) //nolint:errcheck
 		if n < 50 {
 			t.Errorf("category %q has only %d entries (expected ≥50)", cat, n)
+		}
+	}
+}
+
+// TestSeedNarrativeByVersion_ReachesV3 verifies that narrative_version = 3 after
+// SeedContentIfEmpty completes on a fresh DB.
+func TestSeedNarrativeByVersion_ReachesV3(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+
+	if err := infradb.SeedContentIfEmpty(ctx, db); err != nil {
+		t.Fatalf("SeedContentIfEmpty: %v", err)
+	}
+
+	var version int
+	if err := db.QueryRowContext(ctx,
+		`SELECT narrative_version FROM seed_version WHERE id = 1`,
+	).Scan(&version); err != nil {
+		t.Fatalf("read narrative_version: %v", err)
+	}
+	if version != 3 {
+		t.Errorf("expected narrative_version = 3, got %d", version)
+	}
+}
+
+// TestSeedNarrativeByVersion_GnomeMotivationExcludesHalfOrc is a regression test for
+// the coherence bug where a Half-Orc received a gnome-tagged motivation entry.
+// Verifies that species-exclusion compat rows are correctly seeded and filtered.
+func TestSeedNarrativeByVersion_GnomeMotivationExcludesHalfOrc(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+
+	if err := infradb.SeedContentIfEmpty(ctx, db); err != nil {
+		t.Fatalf("SeedContentIfEmpty: %v", err)
+	}
+
+	repo := infradb.NewNarrativeRepository(db)
+	entries, err := repo.FindByCategory(ctx,
+		domain.NarrativeMotivation, domain.ClassArtificer, domain.SpeciesHalfOrc)
+	if err != nil {
+		t.Fatalf("FindByCategory: %v", err)
+	}
+
+	for _, e := range entries {
+		if e.Block.Content == "Tu curiosidad gnoma no tiene límites: necesitás entender cómo funciona todo, desarmarlo si es necesario, y armarlo de nuevo pero mejor." {
+			t.Error("gnome-exclusive motivation appeared in half-orc pool — species exclusion not applied")
 		}
 	}
 }
