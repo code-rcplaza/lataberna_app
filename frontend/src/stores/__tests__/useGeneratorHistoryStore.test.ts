@@ -15,6 +15,7 @@ function makeCharacter(id: string, name = 'Personaje'): Character {
     abilityBonusSource: 'species',
     seed: 1,
     createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
     baseStats:  { STR: 10, DEX: 10, CON: 10, INT: 10, WIS: 10, CHA: 10 },
     finalStats: { STR: 10, DEX: 10, CON: 10, INT: 10, WIS: 10, CHA: 10 },
     modifiers:  { STR: 0,  DEX: 0,  CON: 0,  INT: 0,  WIS: 0,  CHA: 0  },
