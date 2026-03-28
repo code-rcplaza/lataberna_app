@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useAuthAPI } from '@/composables/useAuthAPI'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 
 const auth = useAuthStore()
 const { logout } = useAuthAPI()
 const route = useRoute()
-const router = useRouter()
 
 const navItems = [
   { label: 'Forja',      icon: 'auto_fix_high',  to: '/forja',     wip: false, requiresAuth: false },

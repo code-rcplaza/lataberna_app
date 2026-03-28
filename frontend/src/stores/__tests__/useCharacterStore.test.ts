@@ -12,6 +12,7 @@ function makeCharacter(overrides: Partial<Character> = {}): Character {
     class: 'fighter',
     level: 1,
     ruleset: '5e',
+    abilityBonusSource: 'species',
     seed: 12345,
     baseStats:  { STR: 15, DEX: 10, CON: 14, INT: 8, WIS: 12, CHA: 9 },
     finalStats: { STR: 15, DEX: 10, CON: 16, INT: 8, WIS: 12, CHA: 9 },

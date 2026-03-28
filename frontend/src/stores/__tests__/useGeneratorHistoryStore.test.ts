@@ -8,7 +8,7 @@ function makeCharacter(id: string, name = 'Personaje'): Character {
     id,
     name,
     species: 'human',
-    subSpecies: null,
+    subSpecies: undefined,
     class: 'fighter',
     level: 1,
     ruleset: '5e',

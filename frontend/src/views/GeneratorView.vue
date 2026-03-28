@@ -41,17 +41,6 @@ const isSaveDisabled = () =>
   characterStore.isSaved ||
   libraryStore.isLoading
 
-function exportJSON() {
-  const character = characterStore.current
-  if (!character) return
-  const blob = new Blob([JSON.stringify(character, null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${character.name.toLowerCase().replace(/\s+/g, '-')}.json`
-  a.click()
-  URL.revokeObjectURL(url)
-}
 </script>
 
 <template>
