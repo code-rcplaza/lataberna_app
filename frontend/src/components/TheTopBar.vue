@@ -1,15 +1,9 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useAuthAPI } from '@/composables/useAuthAPI'
-import { useRoute } from 'vue-router'
 
 const auth = useAuthStore()
 const { logout } = useAuthAPI()
-const route = useRoute()
-
-function isActive(to: string): boolean {
-  return route.path === to || route.path.startsWith(to + '/')
-}
 </script>
 
 <template>
@@ -17,23 +11,6 @@ function isActive(to: string): boolean {
 
     <!-- Brand -->
     <span class="text-primary font-headline italic text-2xl shrink-0">La Taberna RPG</span>
-
-    <!-- Nav -->
-    <nav class="hidden md:flex items-center gap-6">
-      <RouterLink
-        to="/forja"
-        class="text-sm font-medium transition-colors"
-        :class="isActive('/forja') ? 'text-primary font-bold underline underline-offset-8' : 'text-on-surface-variant hover:text-on-surface'"
-      >Forja</RouterLink>
-      <RouterLink
-        v-if="auth.isAuthenticated"
-        to="/biblioteca"
-        class="text-sm font-medium transition-colors"
-        :class="isActive('/biblioteca') ? 'text-primary font-bold underline underline-offset-8' : 'text-on-surface-variant hover:text-on-surface'"
-      >Biblioteca</RouterLink>
-      <span class="text-sm text-outline font-medium cursor-not-allowed opacity-40">Crónicas</span>
-      <span class="text-sm text-outline font-medium cursor-not-allowed opacity-40">Bestiario</span>
-    </nav>
 
     <!-- User block -->
     <div class="flex items-center gap-3 shrink-0">
