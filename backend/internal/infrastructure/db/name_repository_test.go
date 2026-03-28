@@ -190,7 +190,7 @@ func TestSeedNamesV3_Idempotency(t *testing.T) {
 	}
 }
 
-// TestSeedNamesByVersion_ReachesV3 verifies that seed_version = 3 after SeedContentIfEmpty
+// TestSeedNamesByVersion_ReachesV3 verifies that seed_version = 4 after SeedContentIfEmpty
 // completes on a fresh DB.
 func TestSeedNamesByVersion_ReachesV3(t *testing.T) {
 	db := openTestDB(t)
@@ -204,8 +204,8 @@ func TestSeedNamesByVersion_ReachesV3(t *testing.T) {
 	if err := db.QueryRowContext(ctx, `SELECT version FROM seed_version WHERE id = 1`).Scan(&version); err != nil {
 		t.Fatalf("read seed_version: %v", err)
 	}
-	if version != 3 {
-		t.Errorf("expected seed_version = 3, got %d", version)
+	if version != 4 {
+		t.Errorf("expected seed_version = 4, got %d", version)
 	}
 }
 

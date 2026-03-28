@@ -130,6 +130,11 @@ func seedNamesByVersion(ctx context.Context, db *sql.DB) error {
 			return fmt.Errorf("seedNamesByVersion: v3: %w", err)
 		}
 	}
+	if version < 4 {
+		if err := seedNamesV4(ctx, db); err != nil {
+			return fmt.Errorf("seedNamesByVersion: v4: %w", err)
+		}
+	}
 	return nil
 }
 
@@ -206,6 +211,160 @@ func seedNamesV3(ctx context.Context, db *sql.DB) error {
 	return err
 }
 
+// seedNamesV4 replaces 5 pools corrected after v3:
+//   - wood-elf family_name: Spanish compounds → neutral elvish proper nouns
+//   - lightfoot surname: simple words → compound descriptive (Ollacaliente style)
+//   - stout surname: simple words → compound descriptive (Barrilhondo style)
+//   - mountain-dwarf first_name male: English-rooted → Germanic/Nordic
+//   - mountain-dwarf first_name female: English-rooted → Germanic/Nordic
+func seedNamesV4(ctx context.Context, db *sql.DB) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("seedNamesV4: begin: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+
+	// ---- Phase A: component pools (family_name / surname) ----
+	compStmt, err := tx.PrepareContext(ctx,
+		`INSERT OR IGNORE INTO name_entries (id, species_key, gender, name_type, name, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
+	if err != nil {
+		return fmt.Errorf("seedNamesV4: prepare component stmt: %w", err)
+	}
+	defer compStmt.Close()
+
+	compIdx := 0
+	for speciesKey, typeMap := range nameSeedDataV4Components() {
+		for nameType, genderMap := range typeMap {
+			if _, err := tx.ExecContext(ctx,
+				`DELETE FROM name_entries WHERE species_key = ? AND name_type = ?`,
+				speciesKey, nameType); err != nil {
+				return fmt.Errorf("seedNamesV4: delete pool %q/%q: %w", speciesKey, nameType, err)
+			}
+			for gender, names := range genderMap {
+				for _, name := range names {
+					compIdx++
+					id := fmt.Sprintf("name-v4c-%05d", compIdx)
+					if _, err := compStmt.ExecContext(ctx, id, speciesKey, gender, nameType, name, now); err != nil {
+						return fmt.Errorf("seedNamesV4: insert component %q %q %q %q: %w",
+							speciesKey, nameType, gender, name, err)
+					}
+				}
+			}
+		}
+	}
+
+	// ---- Phase B: first_name pools (mountain-dwarf) ----
+	fnStmt, err := tx.PrepareContext(ctx,
+		`INSERT OR IGNORE INTO name_entries (id, species_key, gender, name_type, name, created_at) VALUES (?, ?, ?, 'first_name', ?, ?)`)
+	if err != nil {
+		return fmt.Errorf("seedNamesV4: prepare first_name stmt: %w", err)
+	}
+	defer fnStmt.Close()
+
+	fnIdx := 0
+	for speciesKey, genderMap := range nameSeedDataV4FirstNames() {
+		for gender, names := range genderMap {
+			if _, err := tx.ExecContext(ctx,
+				`DELETE FROM name_entries WHERE species_key = ? AND name_type = 'first_name' AND gender = ?`,
+				speciesKey, gender); err != nil {
+				return fmt.Errorf("seedNamesV4: delete first_name pool %q/%q: %w", speciesKey, gender, err)
+			}
+			for _, name := range names {
+				fnIdx++
+				id := fmt.Sprintf("name-v4f-%05d", fnIdx)
+				if _, err := fnStmt.ExecContext(ctx, id, speciesKey, gender, name, now); err != nil {
+					return fmt.Errorf("seedNamesV4: insert first_name %q %q %q: %w",
+						speciesKey, gender, name, err)
+				}
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	_, err = db.ExecContext(ctx, `UPDATE seed_version SET version = 4 WHERE id = 1`)
+	return err
+}
+
+// nameSeedDataV4Components returns the 3 component pools corrected in v4.
+// Key structure: speciesKey → nameType → gender → names.
+func nameSeedDataV4Components() map[string]map[string]map[string][]string {
+	return map[string]map[string]map[string][]string{
+		"wood-elf": {
+			"family_name": {
+				"any": {
+					"Thornbark", "Mossveil", "Endrith", "Nudoshade", "Dawnwhisper",
+					"Leafsong", "Fernmere", "Briarwind", "Shadowveil", "Willowmere",
+					"Oakenshade", "Ivydawn", "Greenveil", "Silvermere", "Wildgrove",
+					"Elmshade", "Mistbark", "Duskveil", "Springmoss", "Thornhollow",
+					"Dewfall", "Ashveil", "Mosshollow", "Fernhollow", "Briarmere",
+				},
+			},
+		},
+		"lightfoot": {
+			"surname": {
+				"any": {
+					"Ollacaliente", "Sartennegra", "Fogónviejo", "Trigalalto", "Lomadulce",
+					"Panhorneado", "Brasalenta", "Mieloscura", "Nochetibia", "Leñaseca",
+					"Tortalarga", "Fuentecilla", "Riachuelo", "Vallehondo", "Colinalinda",
+					"Campolargo", "Monteverde", "Pradohondo", "Casablanca", "Caminolento",
+					"Herbaverde", "Huertavieja", "Arroyuelo", "Solponiente", "Tardecilla",
+				},
+			},
+		},
+		"stout": {
+			"surname": {
+				"any": {
+					"Barrilhondo", "Piedrafuerte", "Hornillejo", "Toscaparda", "Gravillapesa",
+					"Bellotatosca", "Dundurillo", "Escobanegra", "Garruchapesa", "Jabaligordo",
+					"Mazopesado", "Nabopardo", "Olladeoro", "Peralgordo", "Quesoduro",
+					"Roscavieja", "Troncoviejo", "Vasijaparda", "Cincelromo", "Herrumbrosa",
+					"Ladrilloduro", "Mampostedro", "Nodopiedra", "Ochavopardo", "Pedralonga",
+				},
+			},
+		},
+	}
+}
+
+// nameSeedDataV4FirstNames returns the mountain-dwarf first_name pools corrected in v4.
+// Key structure: speciesKey → gender → names.
+func nameSeedDataV4FirstNames() map[string]map[string][]string {
+	return map[string]map[string][]string{
+		"mountain-dwarf": {
+			"male": {
+				"Aldric", "Borin", "Cragmar", "Dundrak", "Edric",
+				"Forgrim", "Grondar", "Hagrim", "Jarek", "Keldrak",
+				"Lothrak", "Morigrim", "Nordak", "Orkrak", "Peldar",
+				"Quorak", "Rokdar", "Stormak", "Teldrak", "Uldrak",
+				"Vordak", "Wargrim", "Xendrak", "Yeldrak",
+				"Grimvír", "Bjorvír", "Hjordrak", "Thalmar", "Svarrak",
+				"Haldrak", "Fjordmar", "Skolvrak", "Torvdrak", "Veldrak",
+				"Björnak", "Skarak", "Ulgrak", "Fjarak", "Iskrak",
+				"Hjolrak", "Jörak", "Koldrak", "Lundrak", "Mirerak",
+				"Nordrak", "Orzrak", "Pirkrak", "Rimrak", "Skarvak",
+				"Holmrak",
+			},
+			"female": {
+				"Aldis", "Borgna", "Coldara", "Durnea", "Elfrida",
+				"Fangora", "Goltara", "Hilma", "Ingrid", "Jorna",
+				"Koldra", "Lofna", "Moltara", "Norgra", "Olda",
+				"Poldra", "Ragna", "Solgra", "Toldra", "Uldra",
+				"Valdra", "Wolgra",
+				"Bryndis", "Haldra", "Sigvra", "Fjordna", "Svarndra",
+				"Glacina", "Skolvra", "Torvna", "Björna", "Cresta",
+				"Ulvra", "Iskna", "Thalvra", "Galena", "Helmna",
+				"Hjolna", "Jörna", "Koldna", "Lundna", "Mirena",
+				"Nordna", "Orzna", "Pirkna", "Rimna", "Stormna",
+				"Tundra", "Umbrana", "Valkna", "Holmna",
+			},
+		},
+	}
+}
+
 // nameSeedDataV3Components returns V2 component pool replacements (Spanish vocabulary).
 // All entries use gender = "any". Key structure: speciesKey → nameType → gender → names.
 // Pools populated in Phase 2 (TASK-05 through TASK-20).
@@ -262,15 +421,15 @@ func nameSeedDataV3Components() map[string]map[string]map[string][]string {
 				},
 			},
 		},
-		// TASK-09: Wood-elf family names — organic Spanish forest compounds
+		// TASK-09: Wood-elf family names — neutral elvish feel, not Hispanic (per names.md)
 		"wood-elf": {
 			"family_name": {
 				"any": {
-					"Hojasusurro", "Raízverde", "Rocíomiel", "Savaclara", "Cortezamiel",
-					"Almasavia", "Matorralverde", "Musgorío", "Heléchovivo", "Brotetierno",
-					"Cañaveral", "Doselsombra", "Enredadera", "Frondahumeda", "Goterasavia",
-					"Humusblando", "Juncofluvial", "Liquenrocoso", "Mosgotierno", "Nudoanejo",
-					"Orlaforestal", "Pimpolloverde", "Quejaranieve", "Retamaflorida", "Zarcilovivo",
+					"Thornbark", "Mossveil", "Endrith", "Nudoshade", "Dawnwhisper",
+					"Leafsong", "Fernmere", "Briarwind", "Shadowveil", "Willowmere",
+					"Oakenshade", "Ivydawn", "Greenveil", "Silvermere", "Wildgrove",
+					"Elmshade", "Mistbark", "Duskveil", "Springmoss", "Thornhollow",
+					"Dewfall", "Ashveil", "Mosshollow", "Fernhollow", "Briarmere",
 				},
 			},
 		},
@@ -289,27 +448,27 @@ func nameSeedDataV3Components() map[string]map[string]map[string][]string {
 				},
 			},
 		},
-		// TASK-11: Lightfoot halfling surnames — cozy, rustic, pastoral Spanish
+		// TASK-11: Lightfoot halfling surnames — compound descriptive, warm and domestic (per names.md)
 		"lightfoot": {
 			"surname": {
 				"any": {
-					"Trébolseco", "Pradoverde", "Manzanillo", "Campoflor", "Cañaverde",
-					"Macolina", "Cerezuelo", "Alcaravea", "Berroqueña", "Caserillo",
-					"Duraznillo", "Espadañal", "Fresquillo", "Granajuela", "Herbuena",
-					"Juncalejo", "Lavandero", "Melonar", "Nogalejo", "Olivarejo",
-					"Páramo", "Quintanilla", "Retamar", "Serranil", "Tomillar",
+					"Ollacaliente", "Sartennegra", "Fogónviejo", "Trigalalto", "Lomadulce",
+					"Panhorneado", "Brasalenta", "Mieloscura", "Nochetibia", "Leñaseca",
+					"Tortalarga", "Fuentecilla", "Riachuelo", "Vallehondo", "Colinalinda",
+					"Campolargo", "Monteverde", "Pradohondo", "Casablanca", "Caminolento",
+					"Herbaverde", "Huertavieja", "Arroyuelo", "Solponiente", "Tardecilla",
 				},
 			},
 		},
-		// TASK-12: Stout halfling surnames — sturdy, earthy, hearth Spanish
+		// TASK-12: Stout halfling surnames — compound descriptive, sturdy and earthy (per names.md)
 		"stout": {
 			"surname": {
 				"any": {
-					"Barrilero", "Pedrejón", "Hornillo", "Toscabreva", "Gravillón",
-					"Rodapiedra", "Piedrafuerte", "Adobero", "Brochazón", "Canteador",
-					"Dundimbre", "Escobero", "Farragón", "Gravero", "Herrumbre",
-					"Ladrillero", "Mampostero", "Nodosopedro", "Ochavillo", "Peralero",
-					"Roblecejo", "Sillarejo", "Tochero", "Umbralejo", "Vigarejo",
+					"Barrilhondo", "Piedrafuerte", "Hornillejo", "Toscaparda", "Gravillapesa",
+					"Bellotatosca", "Dundurillo", "Escobanegra", "Garruchapesa", "Jabaligordo",
+					"Mazopesado", "Nabopardo", "Olladeoro", "Peralgordo", "Quesoduro",
+					"Roscavieja", "Troncoviejo", "Vasijaparda", "Cincelromo", "Herrumbrosa",
+					"Ladrilloduro", "Mampostedro", "Nodopiedra", "Ochavopardo", "Pedralonga",
 				},
 			},
 		},
@@ -500,13 +659,13 @@ func nameSeedDataV3FirstNames() map[string]map[string][]string {
 				"Lothrak", "Morigrim", "Nordak", "Orkrak", "Peldar",
 				"Quorak", "Rokdar", "Stormak", "Teldrak", "Uldrak",
 				"Vordak", "Wargrim", "Xendrak", "Yeldrak",
-				// new mountain-dwarf first names (replace English compounds)
-				"Grimvír", "Bjorvír", "Coldorn", "Peakmar", "Icevik",
-				"Haldrak", "Frostmar", "Glacirak", "Snowdrak", "Windrak",
-				"Blizzak", "Crestrak", "Driftmar", "Edgerak", "Floerak",
-				"Galerak", "Helmrak", "Icerak", "Jörak", "Koldrak",
-				"Lundrak", "Mirerak", "Nordrak", "Orzrak", "Pirkrak",
-				"Rimrak",
+				// new mountain-dwarf first names (Germanic/Nordic roots, no English vocabulary)
+				"Grimvír", "Bjorvír", "Hjordrak", "Thalmar", "Svarrak",
+				"Haldrak", "Fjordmar", "Skolvrak", "Torvdrak", "Veldrak",
+				"Björnak", "Skarak", "Ulgrak", "Fjarak", "Iskrak",
+				"Hjolrak", "Jörak", "Koldrak", "Lundrak", "Mirerak",
+				"Nordrak", "Orzrak", "Pirkrak", "Rimrak", "Skarvak",
+				"Holmrak",
 			},
 			"female": {
 				// keep proper dwarf female names from V1
@@ -515,13 +674,13 @@ func nameSeedDataV3FirstNames() map[string]map[string][]string {
 				"Koldra", "Lofna", "Moltara", "Norgra", "Olda",
 				"Poldra", "Ragna", "Solgra", "Toldra", "Uldra",
 				"Valdra", "Wolgra",
-				// new mountain-dwarf female names (replace English compounds)
-				"Bryndis", "Haldra", "Sigvra", "Frostna", "Icemara",
-				"Glacina", "Snowdra", "Windra", "Blizzna", "Cresta",
-				"Driftna", "Edgena", "Floena", "Galena", "Helmna",
-				"Icena", "Jörna", "Koldna", "Lundna", "Mirena",
+				// new mountain-dwarf female names (Germanic/Nordic roots, no English vocabulary)
+				"Bryndis", "Haldra", "Sigvra", "Fjordna", "Svarndra",
+				"Glacina", "Skolvra", "Torvna", "Björna", "Cresta",
+				"Ulvra", "Iskna", "Thalvra", "Galena", "Helmna",
+				"Hjolna", "Jörna", "Koldna", "Lundna", "Mirena",
 				"Nordna", "Orzna", "Pirkna", "Rimna", "Stormna",
-				"Tundra", "Umbrana", "Valkna", "Winterna",
+				"Tundra", "Umbrana", "Valkna", "Holmna",
 			},
 		},
 
@@ -589,7 +748,7 @@ func nameSeedDataV3FirstNames() map[string]map[string][]string {
 				"Florencia", "Gaudencia", "Heliodora", "Ildefonsa", "Jenara",
 				"Leoncía", "Macedonia", "Natalia", "Onésima", "Patricia",
 				"Quirina", "Rigoberta", "Saturna", "Teodora", "Ulpiana",
-				"Venancia", "Wenceslaa", "Ximénez", "Zeferina", "Casimira",
+				"Venancia", "Wenceslada", "Ximénez", "Zeferina", "Casimira",
 				"Dámasa", "Eutimia", "Fermina", "Gerarda", "Huberta",
 				"Isidra", "Javiera", "Lázara", "Marcela", "Nadina",
 				"Obdulia", "Praxedes", "Remedios", "Salomé", "Tomasa",
