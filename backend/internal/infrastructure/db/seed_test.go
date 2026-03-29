@@ -122,8 +122,39 @@ func TestSeedNarrativeByVersion_GnomeMotivationExcludesHalfOrc(t *testing.T) {
 	}
 
 	for _, e := range entries {
-		if e.Block.Content == "Tu curiosidad gnoma no tiene límites: necesitás entender cómo funciona todo, desarmarlo si es necesario, y armarlo de nuevo pero mejor." {
+		if e.Block.Content == "Tu curiosidad gnoma no tiene límites: necesitas entender cómo funciona todo, desarmarlo si es necesario, y armarlo de nuevo pero mejor." {
 			t.Error("gnome-exclusive motivation appeared in half-orc pool — species exclusion not applied")
+		}
+	}
+}
+
+// TestSeedNarrative_FaithBackgroundExcludesRanger is a regression test for the
+// coherence bug where a Wood Elf Ranger received a divine-faith background.
+// Faith-primary backgrounds must not appear in the ranger pool.
+func TestSeedNarrative_FaithBackgroundExcludesRanger(t *testing.T) {
+	db := openTestDB(t)
+	ctx := context.Background()
+
+	if err := infradb.SeedContentIfEmpty(ctx, db); err != nil {
+		t.Fatalf("SeedContentIfEmpty: %v", err)
+	}
+
+	repo := infradb.NewNarrativeRepository(db)
+	entries, err := repo.FindByCategory(ctx,
+		domain.NarrativeBackground, domain.ClassRanger, domain.SpeciesElf)
+	if err != nil {
+		t.Fatalf("FindByCategory: %v", err)
+	}
+
+	faithBackgrounds := []string{
+		"Tu fe salvó a alguien que todos los médicos habían abandonado. Eso te convenció de que el poder divino es real y de que tú eres su canal. Nadie te dijo que el canal también puede romperse.",
+		"Tu orden religiosa fue proscripta por la corona. Dispersados y perseguidos, los pocos miembros que quedan confían en ti para mantener viva la llama de su fe.",
+	}
+	for _, e := range entries {
+		for _, faithText := range faithBackgrounds {
+			if e.Block.Content == faithText {
+				t.Errorf("faith-exclusive background appeared in ranger pool:\n%q", e.Block.Content)
+			}
 		}
 	}
 }

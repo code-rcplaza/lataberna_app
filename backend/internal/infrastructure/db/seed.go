@@ -1591,7 +1591,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		{
 			category: "background",
 			content:  "Tu fe salvó a alguien que todos los médicos habían abandonado. Eso te convenció de que el poder divino es real y de que tú eres su canal. Nadie te dijo que el canal también puede romperse.",
-			compat:   merge(faithful("primary"), warriors("secondary")),
+			compat:   merge(faithful("primary"), classRows([]string{"fighter", "barbarian"}, "secondary"), classRows([]string{"ranger"}, "excluded")),
 		},
 		{
 			category: "background",
@@ -1606,7 +1606,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		{
 			category: "background",
 			content:  "Tu orden religiosa fue proscripta por la corona. Dispersados y perseguidos, los pocos miembros que quedan confían en ti para mantener viva la llama de su fe.",
-			compat:   merge(faithful("primary"), shadows("secondary"), warriors("secondary")),
+			compat:   merge(faithful("primary"), classRows([]string{"rogue", "warlock", "fighter", "barbarian"}, "secondary"), classRows([]string{"ranger"}, "excluded")),
 		},
 
 		// ═══════════════════════════════════════════════════════════════════
