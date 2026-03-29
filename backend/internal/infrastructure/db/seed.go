@@ -55,6 +55,12 @@ func seedNarrativeByVersion(ctx context.Context, db *sql.DB) error {
 		}
 	}
 
+	if narrativeVersion < 4 {
+		if err := seedNarrativeV4(ctx, db); err != nil {
+			return fmt.Errorf("seedNarrativeByVersion: v4: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -107,6 +113,60 @@ func seedNarrativeV2(ctx context.Context, db *sql.DB) error {
 		`UPDATE seed_version SET narrative_version = 2 WHERE id = 1`,
 	); err != nil {
 		return fmt.Errorf("seedNarrativeV2: bump version: %w", err)
+	}
+
+	return nil
+}
+
+// seedNarrativeV4 re-applies the full narrative dataset replacing all remaining
+// Rioplatense voseo with neutral tuteo for consistency across all Hispanic audiences.
+func seedNarrativeV4(ctx context.Context, db *sql.DB) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("seedNarrativeV4: begin: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM narrative_entries`); err != nil {
+		return fmt.Errorf("seedNarrativeV4: delete: %w", err)
+	}
+
+	entryStmt, err := tx.PrepareContext(ctx,
+		`INSERT INTO narrative_entries (id, category, content, created_at) VALUES (?, ?, ?, ?)`)
+	if err != nil {
+		return fmt.Errorf("seedNarrativeV4: prepare entry: %w", err)
+	}
+	defer entryStmt.Close()
+
+	compatStmt, err := tx.PrepareContext(ctx,
+		`INSERT OR IGNORE INTO narrative_compatibility (entry_id, dimension, value, group_name) VALUES (?, ?, ?, ?)`)
+	if err != nil {
+		return fmt.Errorf("seedNarrativeV4: prepare compat: %w", err)
+	}
+	defer compatStmt.Close()
+
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+
+	for i, entry := range narrativeSeedData() {
+		id := fmt.Sprintf("narr-%04d", i+1)
+		if _, err := entryStmt.ExecContext(ctx, id, entry.category, entry.content, now); err != nil {
+			return fmt.Errorf("seedNarrativeV4: insert entry %d: %w", i, err)
+		}
+		for _, c := range entry.compat {
+			if _, err := compatStmt.ExecContext(ctx, id, c.dimension, c.value, c.group); err != nil {
+				return fmt.Errorf("seedNarrativeV4: insert compat %d: %w", i, err)
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("seedNarrativeV4: commit: %w", err)
+	}
+
+	if _, err := db.ExecContext(ctx,
+		`UPDATE seed_version SET narrative_version = 4 WHERE id = 1`,
+	); err != nil {
+		return fmt.Errorf("seedNarrativeV4: bump version: %w", err)
 	}
 
 	return nil
@@ -1273,7 +1333,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "background",
-			content:  "Perdiste a tu familia durante un invierno brutal. Desde entonces vagás de pueblo en pueblo buscando un lugar al que llamar hogar, aunque aún no lo encontraste.",
+			content:  "Perdiste a tu familia durante un invierno brutal. Desde entonces vagas de pueblo en pueblo buscando un lugar al que llamar hogar, aunque aún no lo encontraste.",
 		},
 		{
 			category: "background",
@@ -1289,7 +1349,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "background",
-			content:  "Trabajaste como mercenario durante años, vendiendo tu espada al mejor postor. Un encargo salió terriblemente mal y te dejó con una deuda que aún intentás saldar.",
+			content:  "Trabajaste como mercenario durante años, vendiendo tu espada al mejor postor. Un encargo salió terriblemente mal y te dejó con una deuda que aún intentas saldar.",
 		},
 		{
 			category: "background",
@@ -1333,7 +1393,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "background",
-			content:  "Fuiste explorador cartográfico para una gremio de aventureros. Conocés caminos que no aparecen en ningún mapa y ruinas que nadie más ha documentado.",
+			content:  "Fuiste explorador cartográfico para un gremio de aventureros. Conoces caminos que no aparecen en ningún mapa y ruinas que nadie más ha documentado.",
 		},
 		{
 			category: "background",
@@ -1373,7 +1433,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "background",
-			content:  "Creciste en un barrio donde conocer al tipo equivocado era cuestión de tiempo. Conociste a muchos tipos equivocados. Aprendiste de todos ellos.",
+			content:  "Creciste en un barrio donde cruzarte con la persona equivocada era cuestión de tiempo. Conociste a muchas personas equivocadas. Aprendiste de todas ellas.",
 		},
 		{
 			category: "background",
@@ -1600,7 +1660,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "background",
-			content:  "Actuaste como guía de caravanas durante años. Conocés cada camino, cada taberna y cada emboscada habitual entre tres reinos. Cobrás bien por eso.",
+			content:  "Actuaste como guía de caravanas durante años. Conoces cada camino, cada taberna y cada emboscada habitual entre tres reinos. Cobras bien por eso.",
 			compat:   merge(wanderers("primary"), warriors("secondary")),
 		},
 		{
@@ -1673,7 +1733,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "motivation",
-			content:  "Buscás un artefacto perdido que, según la leyenda, puede devolver la vida. No importa cuánto cueste encontrarlo.",
+			content:  "Buscas un artefacto perdido que, según la leyenda, puede devolver la vida. No importa cuánto cueste encontrarlo.",
 		},
 		{
 			category: "motivation",
@@ -1709,11 +1769,11 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "motivation",
-			content:  "Buscás un lugar en el mundo donde pertenecer de verdad. No un lugar geográfico, sino un grupo de personas que te entiendan sin que tengas que explicarte.",
+			content:  "Buscas un lugar en el mundo donde pertenecer de verdad. No un lugar geográfico, sino un grupo de personas que te entiendan sin que tengas que explicarte.",
 		},
 		{
 			category: "motivation",
-			content:  "Quieres ver el mundo antes de morir. Cada mapa que completás, cada ciudad que pisas, es un paso más hacia esa cuenta regresiva que todos ignoramos.",
+			content:  "Quieres ver el mundo antes de morir. Cada mapa que completas, cada ciudad que pisas, es un paso más hacia esa cuenta regresiva que todos ignoramos.",
 		},
 		{
 			category: "motivation",
@@ -1725,7 +1785,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "motivation",
-			content:  "Creés que el sistema actual es irrescatable y que hay que construir uno nuevo sobre las cenizas. Cada acción que tomás es un ladrillo de ese futuro.",
+			content:  "Crees que el sistema actual es irrescatable y que hay que construir uno nuevo sobre las cenizas. Cada acción que tomas es un ladrillo de ese futuro.",
 		},
 		{
 			category: "motivation",
@@ -1741,7 +1801,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "motivation",
-			content:  "Te prometiste que nunca más ibas a depender de nadie para tu seguridad. Cada habilidad nueva que desarrollás es un paso más hacia esa independencia.",
+			content:  "Te prometiste que nunca más ibas a depender de nadie para tu seguridad. Cada habilidad nueva que desarrollas es un paso más hacia esa independencia.",
 		},
 		{
 			category: "motivation",
@@ -1780,7 +1840,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "motivation",
-			content:  "Proteger a los débiles no es una filosofía para vos; es una compulsión. Cuando alguien necesita ayuda y no la recibe, algo en tu pecho se tensa hasta que actuás.",
+			content:  "Proteger a los débiles no es una filosofía para ti; es una compulsión. Cuando alguien necesita ayuda y no la recibe, algo en tu pecho se tensa hasta que actúas.",
 			compat:   merge(classRows([]string{"paladin", "fighter", "ranger"}, "primary"), faithful("secondary")),
 		},
 
@@ -1790,12 +1850,12 @@ func narrativeSeedData() []narrativeSeedEntry {
 
 		{
 			category: "motivation",
-			content:  "Cada invención que creás es un paso hacia un prototipo imposible que vive en tus planos desde hace años. Todo lo demás es financiamiento.",
+			content:  "Cada invención que creas es un paso hacia un prototipo imposible que vive en tus planos desde hace años. Todo lo demás es financiamiento.",
 			compat:   merge(classRows([]string{"artificer"}, "primary"), scholars("secondary"), faithful("excluded")),
 		},
 		{
 			category: "motivation",
-			content:  "Buscás el origen de tu sangre mágica. Alguien en tu linaje hizo algo extraordinario —o terrible— y necesitás saber qué fue.",
+			content:  "Buscas el origen de tu sangre mágica. Alguien en tu linaje hizo algo extraordinario —o terrible— y necesitas saber qué fue.",
 			compat:   merge(classRows([]string{"sorcerer"}, "primary"), scholars("secondary")),
 		},
 		{
@@ -1820,7 +1880,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "motivation",
-			content:  "Buscás el equilibrio perdido entre la magia arcana y el mundo natural. Creés que sin ese equilibrio, todo lo que existe está condenado.",
+			content:  "Buscas el equilibrio perdido entre la magia arcana y el mundo natural. Crees que sin ese equilibrio, todo lo que existe está condenado.",
 			compat:   merge(classRows([]string{"druid", "ranger"}, "primary"), wanderers("secondary"), scholars("excluded")),
 		},
 		{
@@ -1835,12 +1895,12 @@ func narrativeSeedData() []narrativeSeedEntry {
 
 		{
 			category: "motivation",
-			content:  "La deuda con tu patrón del pacto crece. Cada hazaña que realizás es parte del pago de algo que ya no recordás haber prometido.",
+			content:  "La deuda con tu patrón del pacto crece. Cada hazaña que realizas es parte del pago de algo que ya no recuerdas haber prometido.",
 			compat:   merge(classRows([]string{"warlock"}, "primary"), shadows("secondary"), faithful("excluded")),
 		},
 		{
 			category: "motivation",
-			content:  "Un hechizo que lanzaste sin querer cambió el destino de alguien inocente. Llevás ese peso y buscas una forma de enmendar lo que rompiste.",
+			content:  "Un hechizo que lanzaste sin querer cambió el destino de alguien inocente. Llevas ese peso y buscas una forma de enmendar lo que rompiste.",
 			compat:   merge(classRows([]string{"wizard", "sorcerer"}, "primary"), scholars("secondary")),
 		},
 		{
@@ -1864,7 +1924,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "motivation",
-			content:  "El clan enano exige resultados. Volvés cuando tengas un logro digno de ser tallado en la piedra de la sala ancestral.",
+			content:  "El clan enano exige resultados. Vuelves cuando tengas un logro digno de ser tallado en la piedra de la sala ancestral.",
 			compat:   merge(speciesRows([]string{"dwarf"}, "primary"), speciesRows(otherSpecies("dwarf"), "excluded")),
 		},
 		{
@@ -1874,7 +1934,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "motivation",
-			content:  "Tu curiosidad gnoma no tiene límites: necesitás entender cómo funciona todo, desarmarlo si es necesario, y armarlo de nuevo pero mejor.",
+			content:  "Tu curiosidad gnoma no tiene límites: necesitas entender cómo funciona todo, desarmarlo si es necesario, y armarlo de nuevo pero mejor.",
 			compat:   merge(speciesRows([]string{"gnome"}, "primary"), speciesRows(otherSpecies("gnome"), "excluded")),
 		},
 		{
@@ -1884,17 +1944,17 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "motivation",
-			content:  "Tu herencia orca te dio fuerza; tu herencia humana te dio ambición. Juntas te hacen imparable, si lográs que el mundo te dé una oportunidad.",
+			content:  "Tu herencia orca te dio fuerza; tu herencia humana te dio ambición. Juntas te hacen imparable, si logras que el mundo te dé una oportunidad.",
 			compat:   merge(speciesRows([]string{"half-orc"}, "primary"), speciesRows(otherSpecies("half-orc"), "excluded")),
 		},
 		{
 			category: "motivation",
-			content:  "Quieres reconstruir el nombre de tu familia humana después de que las deudas y las malas decisiones lo destruyeran. Empezás desde cero con lo que tienes.",
+			content:  "Quieres reconstruir el nombre de tu familia humana después de que las deudas y las malas decisiones lo destruyeran. Empiezas desde cero con lo que tienes.",
 			compat:   merge(speciesRows([]string{"human"}, "primary"), speciesRows([]string{"half-elf"}, "secondary"), speciesRows(otherSpecies("human", "half-elf"), "excluded")),
 		},
 		{
 			category: "motivation",
-			content:  "Como medio elfo, cargás con las expectativas de dos mundos que nunca se pusieron de acuerdo. Decidiste ignorar ambos y definirte solo.",
+			content:  "Como medio elfo, cargas con las expectativas de dos mundos que nunca se pusieron de acuerdo. Decidiste ignorar ambos y definirte solo.",
 			compat:   merge(speciesRows([]string{"half-elf"}, "primary"), speciesRows([]string{"elf"}, "secondary"), speciesRows(otherSpecies("half-elf", "elf"), "excluded")),
 		},
 		{
@@ -1917,7 +1977,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "motivation",
-			content:  "Creés en la posibilidad de un mundo más justo. Cada acción pequeña que tomás es un granito de arena hacia algo que quizás no verás terminado en tu vida.",
+			content:  "Crees en la posibilidad de un mundo más justo. Cada acción pequeña que tomas es un granito de arena hacia algo que quizás no verás terminado en tu vida.",
 		},
 		{
 			category: "motivation",
@@ -1957,7 +2017,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "motivation",
-			content:  "Sos el tipo de persona que no puede ver sufrimiento innecesario sin actuar. Eso te mete en problemas constantemente, y no puedes parar.",
+			content:  "Eres el tipo de persona que no puede ver sufrimiento innecesario sin actuar. Eso te mete en problemas constantemente, y no puedes parar.",
 		},
 
 		// ═══════════════════════════════════════════════════════════════════
@@ -1990,7 +2050,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "secret",
-			content:  "En cierto momento de tu vida, tomaste una decisión cobarde de la que nunca hablaste. El orgullo que mostrás es una armadura contra esa verdad.",
+			content:  "En cierto momento de tu vida, tomaste una decisión cobarde de la que nunca hablaste. El orgullo que muestras es una armadura contra esa verdad.",
 		},
 		{
 			category: "secret",
@@ -2002,7 +2062,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "secret",
-			content:  "Sos inmune a algo que debería matarte. No sabes por qué. Cada vez que lo descubres por accidente, intentás no pensar en las implicancias.",
+			content:  "Eres inmune a algo que debería matarte. No sabes por qué. Cada vez que lo descubres por accidente, intentas no pensar en las implicaciones.",
 		},
 		{
 			category: "secret",
@@ -2022,7 +2082,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "secret",
-			content:  "Llevas meses con una condición que ocultás cuidadosamente. No es grave todavía. Pero los episodios se están volviendo más frecuentes.",
+			content:  "Llevas meses con una condición que ocultas cuidadosamente. No es grave todavía. Pero los episodios se están volviendo más frecuentes.",
 		},
 		{
 			category: "secret",
@@ -2030,7 +2090,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "secret",
-			content:  "Conocés el paradero de algo que mucha gente busca. No te pertenece, pero tampoco sabes a quién dárselo sin crear un problema mayor.",
+			content:  "Conoces el paradero de algo que mucha gente busca. No te pertenece, pero tampoco sabes a quién dárselo sin crear un problema mayor.",
 		},
 		{
 			category: "secret",
@@ -2050,7 +2110,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "secret",
-			content:  "Tomaste algo de alguien que ya no puede reclamarlo. Es útil. Es valioso. Y cada vez que lo usás, lo justificás de una manera ligeramente diferente.",
+			content:  "Tomaste algo de alguien que ya no puede reclamarlo. Es útil. Es valioso. Y cada vez que lo usas, lo justificas de una manera ligeramente diferente.",
 		},
 		{
 			category: "secret",
@@ -2111,7 +2171,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 
 		{
 			category: "secret",
-			content:  "Tu fe tambalea. La deidad a la que servís lleva meses en silencio y empezás a preguntarte si alguna vez estuvo realmente ahí.",
+			content:  "Tu fe tambalea. La deidad a la que sirves lleva meses en silencio y empiezas a preguntarte si alguna vez estuvo realmente ahí.",
 			compat:   merge(classRows([]string{"cleric", "paladin"}, "primary"), faithful("secondary"), shadows("excluded")),
 		},
 		{
@@ -2141,7 +2201,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "secret",
-			content:  "Tus poderes mágicos innatos tienen un costo físico que ocultás cuidadosamente. Cada hechizo poderoso acorta algo que prefieres no medir.",
+			content:  "Tus poderes mágicos innatos tienen un costo físico que ocultas cuidadosamente. Cada hechizo poderoso acorta algo que prefieres no medir.",
 			compat:   merge(classRows([]string{"sorcerer"}, "primary"), scholars("secondary"), faithful("secondary")),
 		},
 
@@ -2171,7 +2231,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "secret",
-			content:  "El nombre que usás no es el tuyo. El verdadero nombre tiefling que te dieron al nacer tiene poder, y alguien podría usarlo en tu contra.",
+			content:  "El nombre que usas no es el tuyo. El verdadero nombre tiefling que te dieron al nacer tiene poder, y alguien podría usarlo en tu contra.",
 			compat:   merge(speciesRows([]string{"tiefling"}, "primary"), speciesRows(otherSpecies("tiefling"), "excluded")),
 		},
 		{
@@ -2181,7 +2241,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "secret",
-			content:  "Sos más valiente de lo que parecés, y eso te aterra. Porque si la gente lo descubriera, empezarían a pedirte cosas que no sabes si puedes dar.",
+			content:  "Eres más valiente de lo que pareces, y eso te aterra. Porque si la gente lo descubriera, empezarían a pedirte cosas que no sabes si puedes dar.",
 			compat:   merge(speciesRows([]string{"halfling"}, "primary"), speciesRows(otherSpecies("halfling"), "excluded")),
 		},
 		{
@@ -2217,7 +2277,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "secret",
-			content:  "Tienes capacidades que aún no entendés completamente. Cada vez que aparecen, dejas daño colateral que explicas con mentiras cada vez menos convincentes.",
+			content:  "Tienes capacidades que aún no entiendes completamente. Cada vez que aparecen, dejas daño colateral que explicas con mentiras cada vez menos convincentes.",
 		},
 		{
 			category: "secret",
@@ -2225,7 +2285,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "secret",
-			content:  "Pasaste por una experiencia que cambió fundamentalmente cómo percibís la realidad. Desde entonces, no estás seguro de si lo que ves es lo que hay.",
+			content:  "Pasaste por una experiencia que cambió fundamentalmente cómo percibes la realidad. Desde entonces, no estás seguro de si lo que ves es lo que hay.",
 		},
 		{
 			category: "secret",
@@ -2233,7 +2293,7 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "secret",
-			content:  "Sos el responsable indirecto de la caída de alguien a quien todos respetan. No actuaste con malicia, pero tampoco hiciste nada para evitarlo cuando podías.",
+			content:  "Eres el responsable indirecto de la caída de alguien a quien todos respetan. No actuaste con malicia, pero tampoco hiciste nada para evitarlo cuando podías.",
 		},
 		{
 			category: "secret",
@@ -2241,11 +2301,11 @@ func narrativeSeedData() []narrativeSeedEntry {
 		},
 		{
 			category: "secret",
-			content:  "Conocés una debilidad crítica de alguien poderoso. Lo mantienes como seguro de vida. Ellos saben que sabes, y por ahora nadie hace ningún movimiento.",
+			content:  "Conoces una debilidad crítica de alguien poderoso. Lo mantienes como seguro de vida. Ellos saben que sabes, y por ahora nadie hace ningún movimiento.",
 		},
 		{
 			category: "secret",
-			content:  "Una vez tomaste el mérito por algo que hizo otra persona. Esa persona murió antes de que pudieras corregirlo. El reconocimiento que recibís desde entonces se siente envenenado.",
+			content:  "Una vez tomaste el mérito por algo que hizo otra persona. Esa persona murió antes de que pudieras corregirlo. El reconocimiento que recibes desde entonces se siente envenenado.",
 		},
 		{
 			category: "secret",

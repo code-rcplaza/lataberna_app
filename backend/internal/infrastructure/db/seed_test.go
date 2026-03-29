@@ -82,9 +82,9 @@ func TestSeedContentIfEmpty_AllCategoriesPresent(t *testing.T) {
 	}
 }
 
-// TestSeedNarrativeByVersion_ReachesV3 verifies that narrative_version = 3 after
+// TestSeedNarrativeByVersion_ReachesV4 verifies that narrative_version = 4 after
 // SeedContentIfEmpty completes on a fresh DB.
-func TestSeedNarrativeByVersion_ReachesV3(t *testing.T) {
+func TestSeedNarrativeByVersion_ReachesV4(t *testing.T) {
 	db := openTestDB(t)
 	ctx := context.Background()
 
@@ -98,8 +98,8 @@ func TestSeedNarrativeByVersion_ReachesV3(t *testing.T) {
 	).Scan(&version); err != nil {
 		t.Fatalf("read narrative_version: %v", err)
 	}
-	if version != 3 {
-		t.Errorf("expected narrative_version = 3, got %d", version)
+	if version != 4 {
+		t.Errorf("expected narrative_version = 4, got %d", version)
 	}
 }
 
