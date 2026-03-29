@@ -54,7 +54,7 @@ const classOptions: Array<{ value: Class | 'random'; label: string }> = [
   { value: 'fighter',    label: 'Guerrero' },
   { value: 'monk',       label: 'Monje' },
   { value: 'paladin',    label: 'Paladín' },
-  { value: 'ranger',     label: 'Montaraz' },
+  { value: 'ranger',     label: 'Explorador' },
   { value: 'rogue',      label: 'Pícaro' },
   { value: 'sorcerer',   label: 'Hechicero' },
   { value: 'warlock',    label: 'Brujo' },

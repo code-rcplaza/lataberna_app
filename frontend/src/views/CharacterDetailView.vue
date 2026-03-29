@@ -43,7 +43,7 @@ const subSpeciesLabels: Record<string, string> = {
 }
 const classLabels: Record<string, string> = {
   barbarian: 'Bárbaro', bard: 'Bardo', cleric: 'Clérigo', druid: 'Druida', fighter: 'Guerrero',
-  monk: 'Monje', paladin: 'Paladín', ranger: 'Montaraz', rogue: 'Pícaro', sorcerer: 'Hechicero',
+  monk: 'Monje', paladin: 'Paladín', ranger: 'Explorador', rogue: 'Pícaro', sorcerer: 'Hechicero',
   warlock: 'Brujo', wizard: 'Mago', artificer: 'Artificiero',
 }
 const statLabels: Record<string, string> = {
