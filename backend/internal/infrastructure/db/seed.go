@@ -1538,6 +1538,254 @@ func narrativeSeedData() []narrativeSeedEntry {
 			content:  "Participaste en un torneo de campeones que te ganó fama regional. Después del torneo, los desafíos empezaron a llegar solos y tuviste que decidir cuáles valía la pena aceptar.",
 			compat:   merge(classRows([]string{"fighter", "barbarian"}, "primary"), classRows([]string{"monk"}, "secondary")),
 		},
+		{
+			category: "warriors",
+			content:  "Ganaste tu libertad en las fosas de combate, pero el precio fue tu escuadrón. Ahora cada golpe de tu espeta va dedicado a los caídos.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"human"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Tu familia fue masacrada por saqueadores y tú sobreviviste oculto entre los cadáveres. La venganza es lo único que calienta tus noches.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"human"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Juraste proteger un puente fronterizo durante tres inviernos sin fallar un solo turno. Tu palabra es más fuerte que el acero.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"human"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Fuiste verdugo de un tirano y cargas con diecisiete almas en tu conciencia. Ahora buscas una muerte que redima cada una de ellas.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"human"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Descifraste un mapa antiguo en la biblioteca de un mago caído. Las ruinas prometen una armadura legendaria y tú quieres probar su leyenda.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"human"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "El juramento de tu orden te exige patrullar la frontera este cada luna llena. Fallaste una vez y tres pueblos pagaron el precio.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"human"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "El gremio de herreros te maldijo por robar su acero de uranio. Ahora cargas con la hoja prohibida y con la recompensa por tu cabeza.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"human"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Desertaste de un ejército invasor la noche antes de la masacre. Tus antiguos compañeros te llaman cobarde, pero los niños de aquel pueblo aún respiran.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"human"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Desertaste tras negarte a una orden injusta de tu señor. Ahora usas tus tácticas de emboscada para cazar a los caballeros que antes llamabas hermanos.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"human"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Viste a tu hermana morir mientras los sacerdotes rezaban en vano. Decidiste que tu espada sería el único muro real entre la muerte y los inocentes.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"human"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Fuiste el primer elfo en un siglo en portar el mandoble de los maestros de armas humanos. Tu técnica es un híbrido letal de precisión ancestral y fuerza bruta de frontera.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"elf"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Tu linaje fue desterrado de las cortes por un crimen que no cometiste. Ahora tu acero busca la cabeza del traidor para limpiar tu nombre y reclamar tu herencia.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"elf"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Tras trescientos años de paz, fuiste el único en advertir la llegada de los invasores. Empuñas la hoja no por gloria, sino porque alguien debe ser el escudo de los que olvidaron la guerra.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"elf"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Sobreviviste al asedio de tu fortaleza forestal oculto entre las raíces, observando cómo caían tus hermanos. El bosque ya no te da paz, solo el ritmo del metal chocando en el campo de batalla.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"elf"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Te cansaste de las canciones etéreas y los banquetes eternos de tu pueblo. Buscas la perfección marcial en el barro y la sangre, donde un segundo de duda significa la muerte.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"elf"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Cargas con una armadura abollada que rescataste de un campo de batalla olvidado. Cada muesca en tu escudo cuenta la historia de un compañero que no tuvo tu suerte ni tu destreza.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"elf"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Tu señor te encomendó proteger un secreto que ya no existe, pero tu honor te impide abandonar el puesto. Patrullas los caminos como un centinela sin causa, esperando un desafío digno.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"elf"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Como antiguo capitán de la guardia real, fallaste en proteger al heredero durante un golpe de estado. Ahora vagas como mercenario, buscando una oportunidad para morir defendiendo algo que importe.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"elf"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Viajaste a tierras lejanas para estudiar los estilos de combate de las razas de vida corta. Te fascina la urgencia con la que luchan y has adoptado su agresividad en tu propio arte.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"elf"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Un duelo de honor te dejó una cicatriz que tu orgullo no puede sanar. Buscas al espadachín que te humilló para demostrar que la paciencia de un elfo es más afilada que cualquier daga.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"elf"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Heredaste un código de honor de un caballero moribundo que te ocultó de la guardia real. Ahora recorres los caminos desafiando a duelistas injustos para demostrar que la nobleza no reside en la sangre, sino en los actos.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"half-orc"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Te ganaste la vida como ejecutor de deudas en los suburbios hasta que la mirada de una víctima te recordó a tu propia madre. Abandonaste el gremio y ahora usas tu fuerza para proteger a quienes antes solías quebrar.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"half-orc"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Cargas con el estandarte desgarrado de un batallón que fue aniquilado por un error táctico de su general. Tu misión es encontrar a ese hombre y obligarlo a escuchar los nombres de los caídos antes de que tu hoja dicte sentencia.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"half-orc"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Tu aldea te exilió por miedo a la fuerza que despertaba en tus venas. Buscas un maestro que no te tema y un campo de batalla donde tu vigor sea visto como un don y no como una condena.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"half-orc"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Encontraste un manual de tácticas militares entre los restos de un asedio y lo aprendiste de memoria. Combinas la furia de tu herencia con una disciplina que descoloca incluso a los veteranos más curtidos.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"half-orc"}, "secondary")),
+		},{
+			category: "warriors",
+			content:  "Naciste en los cuarteles de una legión que te consideraba prescindible. Tras sobrevivir a campañas suicidas, llevas tu armadura abollada como el único hogar que el mundo te ha permitido conservar.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"half-orc"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Tu hacha fue forjada con el metal de las cadenas que rompiste durante una rebelión en las minas. No luchas por la paz, sino para asegurarte de que nadie vuelva a intentar someterte.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"half-orc"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Tu antiguo jefe de guerra te marcó con hierro al rojo vivo antes de que le arrancaras la mano de un mordisco. Ahora sigues el rastro de su horda, decidido a terminar lo que empezaste.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"half-orc"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "El olor a sangre despierta en ti una furia que la disciplina no logra contener. No luchas por causa alguna, sino por ese instante donde el mundo se reduce al impacto del acero contra la carne.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"half-orc"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Para tu clan eras débil; para los humanos, una amenaza. Aprendiste a abrazar esa brutalidad para sobrevivir en tierras donde solo los que golpean primero viven para ver el amanecer.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"half-orc"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Juraste terminar el puente que tu padre dejó inconcluso cuando murió en un derrumbe. Cada batalla que luchas es un paso más hacia reunir el oro y el tiempo necesarios para honrar su nombre.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"dwarf"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Fuiste aprendiz de un maestro armero que nunca logró forjar su obra maestra. Cargas su martillo y su fracaso, decidido a crear un arma digna de su memoria, aunque tengas que probarla en cien guerras.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"dwarf"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Tu clan fue acusado de abandonar una fortaleza en combate. No puedes borrar la mancha, pero sí puedes cargar con ella: luchas en primera línea para que nadie vuelva a dudar del temple de tu sangre.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"dwarf"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Guardas un libro de cuentas donde registras cada deuda de honor que has contraído. No importa cuántos años pasen: cada nombre será saldado con acero o con sacrificio.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"dwarf"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Protegiste una caravana durante años sin fallar una sola vez, hasta el día en que bajaste la guardia. Desde entonces no aceptas descanso ni compañía: solo escoltas caminos peligrosos, como si cada viaje pudiera compensar aquel error.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"dwarf"}, "secondary")),
+		},{
+			category: "warriors",
+			content:  "Sobreviviste al colapso de una mina donde quedaron atrapados tus hermanos. Desde entonces, cada enemigo que enfrentas es otro golpe contra la montaña que te los arrebató.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"dwarf"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Te expulsaron del clan por romper una tradición que considerabas inútil. No buscas perdón: buscas demostrar que tus decisiones resisten más que sus viejas reglas.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"dwarf"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Tu armadura está hecha de piezas que rescataste de campos de batalla olvidados. No es hermosa, pero aguanta. Para ti, eso es suficiente.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"dwarf"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Un túnel que juraste proteger fue tomado mientras dormías. No has vuelto a dormir bajo techo desde entonces: solo descansas cuando tu espalda toca la piedra y tu arma sigue en la mano.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"dwarf"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Llevas grabados en tu hacha los nombres de quienes traicionaron a tu clan. No necesitas recordar sus rostros: el acero sabe a quién debe encontrar.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"dwarf"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Aprendiste a pelear para no depender de la magia que fluye en tu sangre. Cada golpe que das es una prueba de que tu voluntad pesa más que cualquier herencia.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"tiefling"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Un maestro de armas aceptó entrenarte solo para demostrar que estabas equivocado. Años después, sigues su disciplina con precisión absoluta, decidido a probar que no eres lo que él esperaba.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"tiefling"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Te ofrecieron poder a cambio de rendirte a tu naturaleza, y lo rechazaste. Desde entonces, cada victoria en combate es una forma de reafirmar que sigues siendo dueño de tus decisiones.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"tiefling"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Creciste ocultando tus rasgos entre capas y sombras, hasta que decidiste dejar de esconderte. Ahora entras a cada combate sin bajar la mirada, obligando al mundo a enfrentarte tal como eres.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"tiefling"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Protegiste una aldea que nunca confió en ti, incluso cuando te cerraban las puertas al caer la noche. No luchas por su aceptación, sino porque elegiste ser mejor que sus miedos.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"tiefling"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Sientes el calor subir por tus venas cuando el combate se intensifica. Has aprendido a no apagarlo, sino a dirigirlo, como una llama que solo quema lo que decides.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"tiefling"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Una voz en tus sueños te enseñó a luchar sin piedad. No sabes de dónde viene, pero cada vez que empuñas el arma, sus lecciones se sienten demasiado precisas para ignorarlas.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"tiefling"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Dejaste atrás un pasado donde disfrutabas demasiado del combate. Ahora eliges tus batallas con cuidado, temiendo el día en que vuelvas a cruzar esa línea sin darte cuenta.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"tiefling"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Las llamas no te dañan, pero eso no significa que no duelan. Cada cicatriz invisible es un recordatorio de que hay partes de ti que nunca podrás apagar del todo.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"tiefling"}, "secondary")),
+		},
+		{
+			category: "warriors",
+			content:  "Un enemigo te llamó monstruo antes de caer. No fue la primera vez, pero sí la primera en que dudaste si tenía razón.",
+			compat:   merge(classRows([]string{"fighter"}, "primary"), speciesRows([]string{"tiefling"}, "secondary")),
+		},
 
 		// ═══════════════════════════════════════════════════════════════════
 		// BACKGROUND — Scholars primary

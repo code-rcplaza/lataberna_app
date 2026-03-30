@@ -1,4 +1,4 @@
-# La Taberna RPG
+> # La Taberna RPG
 
 Generador de personajes D&D 5e que produce personajes completos y narrativamente ricos en español. Backend en Go con arquitectura limpia, API GraphQL, base de datos SQLite y frontend Vue 3.
 
@@ -6,17 +6,17 @@ Generador de personajes D&D 5e que produce personajes completos y narrativamente
 
 ## Stack
 
-| Capa | Tecnología |
-|---|---|
-| Backend | Go 1.25 — arquitectura limpia (domain / usecase / infrastructure) |
-| API | GraphQL via `gqlgen` |
-| Base de datos | SQLite3 + migraciones Atlas HCL |
-| Email | Resend (magic link auth) |
-| Frontend | Vue 3 + TypeScript + Pinia + Vue Router |
-| CSS | Tailwind CSS |
-| Build frontend | Vite |
-| Deploy backend | Railway (Docker) |
-| Deploy frontend | Vercel (SPA rewrite) |
+| Capa            | Tecnología                                                        |
+| --------------- | ----------------------------------------------------------------- |
+| Backend         | Go 1.25 — arquitectura limpia (domain / usecase / infrastructure) |
+| API             | GraphQL via `gqlgen`                                              |
+| Base de datos   | SQLite3 + migraciones Atlas HCL                                   |
+| Email           | Resend (magic link auth)                                          |
+| Frontend        | Vue 3 + TypeScript + Pinia + Vue Router                           |
+| CSS             | Tailwind CSS                                                      |
+| Build frontend  | Vite                                                              |
+| Deploy backend  | Railway (Docker)                                                  |
+| Deploy frontend | Vercel (SPA rewrite)                                              |
 
 ---
 
@@ -108,19 +108,19 @@ make generate                    # gqlgen code generation
 
 ### Backend (`.env`)
 
-| Variable | Descripción | Default |
-|---|---|---|
-| `DB_PATH` | Ruta a la base de datos SQLite | `forge.db` |
-| `PORT` | Puerto del servidor | `8080` |
-| `CORS_ORIGIN` | Origen permitido por CORS | `http://localhost:5173` |
-| `LINK_BASE` | URL base para verificación del magic link | `http://localhost:8080/auth/verify` |
-| `RESEND_API_KEY` | API key de Resend (opcional — sin ella imprime a stdout) | — |
-| `RESEND_FROM` | Header From de los emails | `La Taberna <noreply@lataberna.app>` |
+| Variable         | Descripción                                              | Default                              |
+| ---------------- | -------------------------------------------------------- | ------------------------------------ |
+| `DB_PATH`        | Ruta a la base de datos SQLite                           | `forge.db`                           |
+| `PORT`           | Puerto del servidor                                      | `8080`                               |
+| `CORS_ORIGIN`    | Origen permitido por CORS                                | `http://localhost:5173`              |
+| `LINK_BASE`      | URL base para verificación del magic link                | `http://localhost:8080/auth/verify`  |
+| `RESEND_API_KEY` | API key de Resend (opcional — sin ella imprime a stdout) | —                                    |
+| `RESEND_FROM`    | Header From de los emails                                | `La Taberna <noreply@lataberna.app>` |
 
 ### Frontend (`.env`)
 
-| Variable | Descripción |
-|---|---|
+| Variable           | Descripción                  |
+| ------------------ | ---------------------------- |
 | `VITE_GRAPHQL_URL` | Endpoint GraphQL del backend |
 
 ---
@@ -192,18 +192,18 @@ type DerivedStats struct { HP, AC int }
 
 Sistema de composición multi-componente por especie. Cada especie tiene reglas de ensamblado propias:
 
-| Especie | Formato |
-|---|---|
-| Humano | Nombre + Apellido |
-| Enano (Hill/Mountain) | Nombre + Nombre de clan |
-| Elfo (High/Wood/Drow) | Nombre + Apellido familiar |
-| Mediano (Lightfoot/Stout) | Nombre + Apellido |
-| Gnomo (Forest/Rock) | Nombre + Clan + "Apodo" |
-| Semielfo | Nombre + Apellido (humano o élfico, al azar) |
-| Semiorco | Nombre [+ Apellido con 30% de probabilidad] |
-| Dragonborn | Clan + Nombre (el clan va primero) |
-| Tiefling Infernal | Nombre infernal (componente único) |
-| Tiefling Virtud | Palabra de virtud en español |
+| Especie                   | Formato                                      |
+| ------------------------- | -------------------------------------------- |
+| Humano                    | Nombre + Apellido                            |
+| Enano (Hill/Mountain)     | Nombre + Nombre de clan                      |
+| Elfo (High/Wood/Drow)     | Nombre + Apellido familiar                   |
+| Mediano (Lightfoot/Stout) | Nombre + Apellido                            |
+| Gnomo (Forest/Rock)       | Nombre + Clan + "Apodo"                      |
+| Semielfo                  | Nombre + Apellido (humano o élfico, al azar) |
+| Semiorco                  | Nombre [+ Apellido con 30% de probabilidad]  |
+| Dragonborn                | Clan + Nombre (el clan va primero)           |
+| Tiefling Infernal         | Nombre infernal (componente único)           |
+| Tiefling Virtud           | Palabra de virtud en español                 |
 
 Todo el contenido está en español. Los datos se almacenan en SQLite (`name_entries`) con columnas `species_key`, `gender`, `name_type` y `name`.
 
@@ -267,11 +267,11 @@ deleteCharacter(id: ID!): Boolean!
 
 ```graphql
 type CharacterLocks {
-  name:       Boolean!
-  stats:      Boolean!
+  name: Boolean!
+  stats: Boolean!
   background: Boolean!
   motivation: Boolean!
-  secret:     Boolean!
+  secret: Boolean!
 }
 ```
 
@@ -283,16 +283,16 @@ Los campos bloqueados se preservan. Los desbloqueados se regeneran. Mismo `seed`
 
 SQLite3 con WAL journal mode y foreign keys habilitadas. Migraciones versionadas en `migrate()` al startup.
 
-| Tabla | Propósito |
-|---|---|
-| `users` | Cuentas de usuario (email) |
-| `sessions` | Sesiones activas |
-| `magic_link_tokens` | Tokens de auth (hasheados, TTL 15min) |
-| `characters` | Biblioteca de personajes (stats como JSON) |
-| `narrative_entries` | Bloques narrativos (trasfondo, motivación, secreto) |
-| `narrative_compatibility` | Tags de compatibilidad clase/especie |
-| `name_entries` | Nombres por especie, género y tipo |
-| `seed_version` | Control de versión del seed data |
+| Tabla                     | Propósito                                           |
+| ------------------------- | --------------------------------------------------- |
+| `users`                   | Cuentas de usuario (email)                          |
+| `sessions`                | Sesiones activas                                    |
+| `magic_link_tokens`       | Tokens de auth (hasheados, TTL 15min)               |
+| `characters`              | Biblioteca de personajes (stats como JSON)          |
+| `narrative_entries`       | Bloques narrativos (trasfondo, motivación, secreto) |
+| `narrative_compatibility` | Tags de compatibilidad clase/especie                |
+| `name_entries`            | Nombres por especie, género y tipo                  |
+| `seed_version`            | Control de versión del seed data                    |
 
 ---
 
