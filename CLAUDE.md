@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**FORGE RPG / La Taberna RPG** — D&D 5e character generator that produces complete, coherent, narrative-rich characters in Spanish. Core value: generate a full PC or NPC in seconds, with optional partial regeneration and a personal library.
+**FORGE RPG / La Taberna RPG** — D&D 5.5e (2024 Player's Handbook) character generator that produces complete, coherent, narrative-rich characters in Spanish. Core value: generate a full PC or NPC in seconds, with optional partial regeneration and a personal library.
 
 **Status:** Specification-complete. Source code not yet initialized. All architecture decisions are resolved in `docs/`.
 
@@ -71,8 +71,8 @@ docs/                 → specifications (CONTEXT.md is the source of truth)
 1. resolve inputs       → use provided params or choose randomly
 2. generate baseStats   → per-class baseline
 3. apply variation      → ±1/±2 controlled variation
-4. resolve bonuses      → species/subSpecies bonuses
-5. apply bonuses        → produce finalStats
+4. resolve bonuses      → background ASI pool (+2/+1 standard OR +1/+1/+1 spread)
+5. apply bonuses        → produce finalStats (from background ASI pool, not species)
 6. calculate modifiers  → ⌊(finalStat − 10) / 2⌋ on finalStats (NOT baseStats)
 7. resolve armor        → class default ArmorType
 8. calculate derived    → hp = hit_die + modifiers.CON
@@ -94,8 +94,9 @@ type Character struct {
     SubSpecies       *SubSpecies
     Class            Class
     Level            int
-    Ruleset          Ruleset          // "5e" | "5.5e"
-    AbilityBonusSource string         // "species" | "background" | "none"
+    Ruleset          string           // always "5.5e" — fixed after pivot; kept for save/load fidelity
+    AbilityBonusSource string         // always "background" in 5.5e — species no longer provide ASIs
+    ASIDistribution  string           // "standard" (+2/+1) | "spread" (+1/+1/+1)
     BaseStats        Stats
     FinalStats       Stats
     Modifiers        Modifiers
@@ -116,7 +117,14 @@ type DerivedStats struct { HP, AC int }
 type NarrativeBlock struct {
     Category string   // "background" | "motivation" | "secret"
     Content  string
-    Tags     []string // class/species compatibility tags; "any" = universal
+    Tags     []string // class/species compatibility tags; "any" = universal — same filtering applies to Background selection
+}
+
+type Background struct {
+    Name        string
+    ASIPool     [3]string  // e.g., ["WIS", "INT", "CON"] — defined per background; player picks 2 stats to boost
+    OriginFeat  string     // fixed feat granted by this background (not chosen by player — simplifies generation)
+    Tags        []string   // class/species coherence tags; "any" = universal
 }
 
 type ArmorType struct {
@@ -141,15 +149,18 @@ type CharacterLocks struct {
 ## Architectural Decisions (non-negotiable without explicit discussion)
 
 1. **All parameters optional** — omitted fields generate randomly; never require input.
-2. **Bonuses decoupled from species** — resolved via pipeline, not hardcoded per species.
-3. **Separate baseStats / finalStats** — enables future level scaling and multiclass without rewrites.
-4. **Modifiers on finalStats** — hard invariant in the pipeline.
-5. **Narrative filtered by class + species** — coherence is guaranteed, not optional.
-6. **ArmorType as a resource** — not embedded in class logic; enables future inventory.
-7. **Magic link auth** — no passwords; tokens: 32+ byte entropy, 15min TTL, one-time use, hashed at rest.
-8. **SQLite in MVP** — migrate to Postgres post-validation, Atlas handles migration diffing.
-9. **Level 1 only in MVP** — engine designed to scale to 1–20, not implemented yet.
-10. **Seed for reproducibility** — same seed + same params = same result; enables deterministic testing.
+2. **Ruleset fixed to "5.5e"** — pivoted from 5e; stronger market position for Spanish-language content targeting the 2024 PHB audience. Field kept on Character for save/load fidelity.
+3. **Backgrounds provide ASIs, not species** — per 5.5e rules; background defines an ASIPool of 3 stats, player (or generator) picks a distribution. Species provide racial traits/abilities only.
+4. **ASIDistribution on Character** — "standard" (+2/+1) or "spread" (+1/+1/+1); stored on the entity (not generator config) so saved characters reload with identical stat allocation.
+5. **OriginFeat fixed per background** — the feat granted is determined by the background definition, not chosen by the player; this simplifies generation and keeps the engine deterministic.
+6. **Separate baseStats / finalStats** — enables future level scaling and multiclass without rewrites.
+7. **Modifiers on finalStats** — hard invariant in the pipeline.
+8. **Narrative filtered by class + species** — coherence is guaranteed, not optional. Same Tags filtering applies to Background selection.
+9. **ArmorType as a resource** — not embedded in class logic; enables future inventory.
+10. **Magic link auth** — no passwords; tokens: 32+ byte entropy, 15min TTL, one-time use, hashed at rest.
+11. **SQLite in MVP** — migrate to Postgres post-validation, Atlas handles migration diffing.
+12. **Level 1 only in MVP** — engine designed to scale to 1–20, not implemented yet.
+13. **Seed for reproducibility** — same seed + same params = same result; enables deterministic testing.
 
 ---
 
@@ -188,6 +199,7 @@ func (b *Builder) Build() (*Character, error) {
 
 - **Classes (13):** Barbarian, Bard, Cleric, Druid, Fighter, Monk, Paladin, Ranger, Rogue, Sorcerer, Warlock, Wizard, Artificer
 - **Species (9 with sub-species):** Human, Elf (High/Wood/Drow), Dwarf (Hill/Mountain), Halfling (Lightfoot/Stout), Gnome (Forest/Rock), Half-Elf, Half-Orc, Tiefling, Dragonborn
+- **Species no longer provide ability score bonuses** — per 5.5e rules, ASIs come exclusively from backgrounds. Species data contains racial traits and abilities only.
 - Minimum 50 name entries per gender per species in seed data.
 - New classes/species must be **data additions only** — no logic changes required.
 
