@@ -6,6 +6,14 @@ import (
 	"forge-rpg/internal/domain"
 )
 
+// BackgroundEntry represents a D&D 5.5e background with its mechanical properties.
+type BackgroundEntry struct {
+	Name       string    // display name (e.g., "Acolyte")
+	ASIPool    [3]string // the three stats the background can boost, e.g., ["WIS", "INT", "CHA"]
+	OriginFeat string    // fixed feat granted at level 1
+	Tags       []string  // class/species coherence tags; "any" = universal
+}
+
 // classData holds the static class configuration for stat generation.
 type classData struct {
 	hitDie        int
@@ -83,97 +91,44 @@ var armorTable = map[string]domain.ArmorType{
 	},
 }
 
-// speciesBonuses holds the D&D 5e PHB ability score bonuses per species/subspecies.
-// Keyed by species bonus key (see speciesBonusKey).
-//
-// Species bonuses (5e PHB):
-//   Human:          +1 to all 6 stats
-//   High Elf:       +2 DEX, +1 INT
-//   Wood Elf:       +2 DEX, +1 WIS
-//   Drow:           +2 DEX, +1 CHA
-//   Hill Dwarf:     +2 CON, +1 WIS
-//   Mountain Dwarf: +2 CON, +2 STR
-//   Lightfoot:      +2 DEX, +1 CHA
-//   Stout:          +2 DEX, +1 CON
-//   Forest Gnome:   +2 INT, +1 DEX
-//   Rock Gnome:     +2 INT, +1 CON
-//   Half-Elf:       +2 CHA, +1 STR, +1 CON (choose 2 — defaulting to STR, CON per spec)
-//   Half-Orc:       +2 STR, +1 CON
-//   Tiefling:       +2 CHA, +1 INT
-//   Dragonborn:     +2 STR, +1 CHA
-var speciesBonuses = map[string][]domain.AbilityBonus{
-	"human": {
-		{Stat: "STR", Value: 1, Source: "species"},
-		{Stat: "DEX", Value: 1, Source: "species"},
-		{Stat: "CON", Value: 1, Source: "species"},
-		{Stat: "INT", Value: 1, Source: "species"},
-		{Stat: "WIS", Value: 1, Source: "species"},
-		{Stat: "CHA", Value: 1, Source: "species"},
-	},
-	"high-elf": {
-		{Stat: "DEX", Value: 2, Source: "species"},
-		{Stat: "INT", Value: 1, Source: "species"},
-	},
-	"wood-elf": {
-		{Stat: "DEX", Value: 2, Source: "species"},
-		{Stat: "WIS", Value: 1, Source: "species"},
-	},
-	"drow": {
-		{Stat: "DEX", Value: 2, Source: "species"},
-		{Stat: "CHA", Value: 1, Source: "species"},
-	},
-	"hill-dwarf": {
-		{Stat: "CON", Value: 2, Source: "species"},
-		{Stat: "WIS", Value: 1, Source: "species"},
-	},
-	"mountain-dwarf": {
-		{Stat: "STR", Value: 2, Source: "species"},
-		{Stat: "CON", Value: 2, Source: "species"},
-	},
-	"lightfoot": {
-		{Stat: "DEX", Value: 2, Source: "species"},
-		{Stat: "CHA", Value: 1, Source: "species"},
-	},
-	"stout": {
-		{Stat: "DEX", Value: 2, Source: "species"},
-		{Stat: "CON", Value: 1, Source: "species"},
-	},
-	"forest-gnome": {
-		{Stat: "INT", Value: 2, Source: "species"},
-		{Stat: "DEX", Value: 1, Source: "species"},
-	},
-	"rock-gnome": {
-		{Stat: "INT", Value: 2, Source: "species"},
-		{Stat: "CON", Value: 1, Source: "species"},
-	},
-	// Half-Elf: +2 CHA, then player chooses 2 stats for +1 each.
-	// For generation purposes: defaulting to STR and CON per spec instructions.
-	"half-elf": {
-		{Stat: "CHA", Value: 2, Source: "species"},
-		{Stat: "STR", Value: 1, Source: "species"},
-		{Stat: "CON", Value: 1, Source: "species"},
-	},
-	"half-orc": {
-		{Stat: "STR", Value: 2, Source: "species"},
-		{Stat: "CON", Value: 1, Source: "species"},
-	},
-	"tiefling": {
-		{Stat: "CHA", Value: 2, Source: "species"},
-		{Stat: "INT", Value: 1, Source: "species"},
-	},
-	"dragonborn": {
-		{Stat: "STR", Value: 2, Source: "species"},
-		{Stat: "CHA", Value: 1, Source: "species"},
-	},
+// backgroundTable holds the D&D 5.5e (2024 PHB) backgrounds used for ASI and feat resolution.
+// Order is stable — index 0..15 maps to the 16 canonical backgrounds.
+var backgroundTable = []BackgroundEntry{
+	{Name: "Acolyte",    ASIPool: [3]string{"WIS", "INT", "CHA"}, OriginFeat: "Magic Initiate (Cleric)",  Tags: []string{"cleric", "paladin", "druid"}},
+	{Name: "Artisan",    ASIPool: [3]string{"STR", "DEX", "INT"}, OriginFeat: "Crafter",                  Tags: []string{"any"}},
+	{Name: "Charlatan",  ASIPool: [3]string{"DEX", "CHA", "INT"}, OriginFeat: "Skilled",                  Tags: []string{"rogue", "bard", "warlock"}},
+	{Name: "Criminal",   ASIPool: [3]string{"DEX", "CON", "INT"}, OriginFeat: "Alert",                    Tags: []string{"rogue", "ranger", "warlock"}},
+	{Name: "Entertainer",ASIPool: [3]string{"DEX", "CHA", "STR"}, OriginFeat: "Musician",                 Tags: []string{"bard", "rogue", "sorcerer"}},
+	{Name: "Farmer",     ASIPool: [3]string{"STR", "CON", "WIS"}, OriginFeat: "Tough",                    Tags: []string{"any"}},
+	{Name: "Guard",      ASIPool: [3]string{"STR", "INT", "CHA"}, OriginFeat: "Alert",                    Tags: []string{"fighter", "paladin", "ranger"}},
+	{Name: "Guide",      ASIPool: [3]string{"DEX", "CON", "WIS"}, OriginFeat: "Magic Initiate (Druid)",   Tags: []string{"ranger", "druid", "monk"}},
+	{Name: "Hermit",     ASIPool: [3]string{"CON", "INT", "WIS"}, OriginFeat: "Magic Initiate (Druid)",   Tags: []string{"druid", "monk", "wizard"}},
+	{Name: "Merchant",   ASIPool: [3]string{"CON", "INT", "CHA"}, OriginFeat: "Lucky",                    Tags: []string{"any"}},
+	{Name: "Noble",      ASIPool: [3]string{"STR", "INT", "CHA"}, OriginFeat: "Skilled",                  Tags: []string{"paladin", "fighter", "bard", "warlock"}},
+	{Name: "Sage",       ASIPool: [3]string{"CON", "INT", "WIS"}, OriginFeat: "Magic Initiate (Wizard)",  Tags: []string{"wizard", "sorcerer", "artificer"}},
+	{Name: "Sailor",     ASIPool: [3]string{"STR", "DEX", "WIS"}, OriginFeat: "Tavern Brawler",           Tags: []string{"any"}},
+	{Name: "Scribe",     ASIPool: [3]string{"DEX", "INT", "WIS"}, OriginFeat: "Skilled",                  Tags: []string{"wizard", "artificer", "cleric"}},
+	{Name: "Soldier",    ASIPool: [3]string{"STR", "DEX", "CON"}, OriginFeat: "Savage Attacker",          Tags: []string{"fighter", "paladin", "ranger", "barbarian"}},
+	{Name: "Wayfarer",   ASIPool: [3]string{"DEX", "WIS", "CHA"}, OriginFeat: "Lucky",                    Tags: []string{"rogue", "ranger", "bard", "monk"}},
 }
 
-// speciesBonusKey returns the map key to use for species bonus lookup.
-// For species with subspecies, the subspecies key is used directly.
-func speciesBonusKey(s domain.Species, sub *domain.SubSpecies) string {
-	if sub != nil {
-		return string(*sub)
+// BackgroundsForClass returns all backgrounds whose tags include the given class or "any".
+func BackgroundsForClass(class string) []BackgroundEntry {
+	var result []BackgroundEntry
+	for _, b := range backgroundTable {
+		for _, tag := range b.Tags {
+			if tag == "any" || tag == class {
+				result = append(result, b)
+				break
+			}
+		}
 	}
-	return string(s)
+	return result
+}
+
+// AllBackgrounds returns all background entries.
+func AllBackgrounds() []BackgroundEntry {
+	return backgroundTable
 }
 
 // allClasses returns a stable slice of all valid classes for random selection.

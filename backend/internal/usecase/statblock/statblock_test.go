@@ -91,9 +91,11 @@ func TestGenerate_ModifiersFromFinalStats(t *testing.T) {
 	}
 }
 
-// ─── 3. BaseStats ≠ FinalStats for species with bonuses ─────────────────────
+// ─── 3. FinalStats == BaseStats until background ASI is wired (5.5e stub) ────
+// TODO(5.5e): replace this test with background ASI assertions once
+// background ASI resolution is implemented in the pipeline.
 
-func TestGenerate_HalfOrcBonusApplied(t *testing.T) {
+func TestGenerate_FinalStatsEqualBaseStatsUnderStub(t *testing.T) {
 	seed := int64(100)
 	in := statblock.Input{
 		Class:   ptrClass(domain.ClassBarbarian),
@@ -106,12 +108,9 @@ func TestGenerate_HalfOrcBonusApplied(t *testing.T) {
 		t.Fatalf("Generate: %v", err)
 	}
 
-	// Half-Orc gets +2 STR, +1 CON — FinalStats must differ from BaseStats
-	if out.FinalStats.STR != out.BaseStats.STR+2 {
-		t.Errorf("Half-Orc STR: FinalStats=%d, BaseStats=%d — expected +2", out.FinalStats.STR, out.BaseStats.STR)
-	}
-	if out.FinalStats.CON != out.BaseStats.CON+1 {
-		t.Errorf("Half-Orc CON: FinalStats=%d, BaseStats=%d — expected +1", out.FinalStats.CON, out.BaseStats.CON)
+	// Under the 5.5e stub, no bonuses are applied yet — FinalStats must equal BaseStats.
+	if out.FinalStats != out.BaseStats {
+		t.Errorf("FinalStats %+v != BaseStats %+v — expected equality under bonus stub", out.FinalStats, out.BaseStats)
 	}
 }
 

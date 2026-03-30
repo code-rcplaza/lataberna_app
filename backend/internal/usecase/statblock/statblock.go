@@ -45,7 +45,8 @@ func Generate(in Input) (Output, error) {
 		return Output{}, err
 	}
 
-	bonuses := resolveSpeciesBonuses(species, subSpecies)
+	// TODO(5.5e): replace with background ASI resolution
+	var bonuses []domain.AbilityBonus
 	finalStats := applyBonuses(baseStats, bonuses)
 	modifiers := calculateModifiers(finalStats)
 
@@ -126,11 +127,6 @@ func generateBaseStats(class domain.Class, rng *rand.Rand) (domain.Stats, error)
 		return domain.Stats{}, errUnknownClass(class)
 	}
 	return buildStatsFromPriority(data.primaryStat, data.secondaryStat, rng), nil
-}
-
-func resolveSpeciesBonuses(s domain.Species, sub *domain.SubSpecies) []domain.AbilityBonus {
-	key := speciesBonusKey(s, sub)
-	return speciesBonuses[key]
 }
 
 func applyBonuses(base domain.Stats, bonuses []domain.AbilityBonus) domain.Stats {
