@@ -28,6 +28,12 @@ type Character struct {
 	// Rule configuration
 	Ruleset            Ruleset
 	AbilityBonusSource AbilityBonusSource
+	// BackgroundType is the D&D 5.5e mechanical background entity (e.g., "acolyte", "soldier").
+	// Distinct from the narrative Background NarrativeBlock.
+	BackgroundType string
+	// ASIDistribution defines how the background ASI pool is allocated.
+	// "standard" = +2/+1 to two abilities; "spread" = +1/+1/+1 to three abilities.
+	ASIDistribution string
 
 	// Mechanics — BaseStats before bonuses, FinalStats after bonuses
 	BaseStats  Stats

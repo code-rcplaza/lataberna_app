@@ -20,17 +20,20 @@ const (
 )
 
 // Ruleset identifies the D&D ruleset in use.
+// The default going forward is Ruleset55e ("5.5e").
 type Ruleset string
 
 const (
 	Ruleset5e  Ruleset = "5e"
-	Ruleset55e Ruleset = "5.5e"
+	Ruleset55e Ruleset = "5.5e" // default — new characters use 5.5e rules
 )
 
 // AbilityBonusSource controls how ability bonuses are resolved.
 type AbilityBonusSource string
 
 const (
+	// Deprecated in 5.5e: ability bonuses are always sourced from background.
+	// Kept for backward compatibility with 5e characters.
 	AbilityBonusFromSpecies    AbilityBonusSource = "species"
 	AbilityBonusFromBackground AbilityBonusSource = "background"
 	AbilityBonusNone           AbilityBonusSource = "none"
