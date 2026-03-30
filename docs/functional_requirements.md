@@ -63,14 +63,14 @@ Si se provee un `seed`, el nombre generado es reproducible.
 ---
 
 ### RF-01-003 — Convenciones de nomenclatura por species/subSpecies
-El nombre generado respeta las convenciones canónicas de D&D 5e de cada species y subSpecies.
+El nombre generado respeta las convenciones canónicas de D&D 5.5e de cada species y subSpecies.
 
 **Criterios de aceptación:**
 - Tiefling genera nombres infernales o de virtud según subSpecies.
 - Dragonborn genera el nombre de clan primero.
 - Gnome incluye apodo opcional.
 - Half-Elf y Half-Orc pueden mezclar convenciones de sus species padre.
-- El resto de species respeta sus convenciones canónicas de D&D 5e.
+- El resto de species respeta sus convenciones canónicas de D&D 5.5e.
 
 ---
 
@@ -131,14 +131,16 @@ El sistema genera los 6 stats base aplicando variación controlada sobre el base
 
 ---
 
-### RF-02-004 — Resolución de bonos de species
-El sistema resuelve los bonos de species y los aplica sobre `baseStats` para producir `finalStats`.
+### RF-02-004 — Resolución de bonos de background (ASI pool)
+El sistema resuelve los ASIs del background seleccionado y los aplica sobre `baseStats` para producir `finalStats`.
 
 **Criterios de aceptación:**
-- Los bonos no viven dentro de la species — se resuelven vía `resolveAbilityBonuses`.
+- Los bonos no viven dentro de la species — en 5.5e los ASIs provienen exclusivamente del background.
+- El background resuelto define un `asiPool` de 3 stats; el generador elige o aplica una distribución (`standard` o `spread`).
+- La distribución se almacena en `Character.asiDistribution`.
 - El resultado se almacena como `finalStats` — separado de `baseStats`.
-- `finalStats` refleja correctamente los bonos aplicados sobre `baseStats`.
-- El MVP opera con `abilityBonusSource: 'species'`.
+- `finalStats` refleja correctamente los bonos del background ASI pool aplicados sobre `baseStats`.
+- El MVP opera con `abilityBonusSource: 'background'`.
 
 ---
 
@@ -287,8 +289,9 @@ El personaje generado es coherente entre nombre, stats y narrativa.
 
 **Criterios de aceptación:**
 - El nombre es coherente con `species`, `subSpecies` y `gender`.
-- Los stats son coherentes con `class` y `species`.
+- Los stats son coherentes con `class` y el background ASI pool resuelto.
 - La narrativa es compatible con `class` y `species`.
+- El background seleccionado es coherente con `class` y `species` (filtrado por Tags).
 - No existe combinación de inputs válidos que produzca un personaje incoherente.
 
 ---

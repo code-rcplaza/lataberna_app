@@ -1,7 +1,8 @@
 # mvp-rules.md — rpg_engine
 
-Datos operativos del MVP: clases, species, baselines, armaduras y fórmulas.
-Este archivo cambia cuando se agregan clases, species o se ajustan valores.
+Datos operativos del MVP: clases, species, backgrounds, baselines, armaduras y fórmulas.
+Reglas basadas en D&D 5.5e (2024 Player's Handbook).
+Este archivo cambia cuando se agregan clases, species, backgrounds o se ajustan valores.
 
 ---
 
@@ -65,6 +66,31 @@ Variación aplicada sobre el baseline: ±1/±2 controlado.
 | Dragonborn | — (clan name primero) |
 
 Mínimo 50 entradas de nombres por género/species en la seed.
+
+> **5.5e:** Las species NO otorgan bonos de estadísticas (ASIs).
+> Solo proveen rasgos y habilidades raciales. Los ASIs provienen exclusivamente del background.
+
+---
+
+## Backgrounds (ASI pool — 5.5e)
+
+Cada background define un `asiPool` de 3 stats y un `OriginFeat` fijo.
+El generador aplica una distribución "standard" (+2/+1 a dos stats del pool)
+o "spread" (+1/+1/+1 a los tres).
+
+Ejemplos de backgrounds MVP:
+
+| Background | ASI Pool | Origin Feat | Tags |
+|---|---|---|---|
+| Acolyte | WIS, INT, CON | Magic Initiate (Cleric) | cleric, paladin, druid |
+| Criminal | DEX, INT, CHA | Alert | rogue, warlock, any |
+| Folk Hero | STR, CON, WIS | Tough | fighter, barbarian, ranger |
+| Noble | STR, INT, CHA | Skilled | paladin, bard, warlock |
+| Sage | INT, WIS, CHA | Magic Initiate (Wizard) | wizard, sorcerer, artificer |
+| Soldier | STR, DEX, CON | Savage Attacker | fighter, barbarian, paladin |
+
+> Esta tabla es orientativa para el MVP. La seed data de backgrounds debe incluir suficientes
+> entradas con tags variados para garantizar coherencia en cualquier combinación clase/species.
 
 ---
 

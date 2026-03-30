@@ -8,8 +8,6 @@ Este archivo cambia solo cuando cambia la estructura del modelo, no los datos.
 ## Entidad principal: Character
 
 ```typescript
-type Ruleset = '5e' | '5.5e'
-type AbilityBonusSource = 'species' | 'background' | 'none'
 type ArmorCategory = 'none' | 'light' | 'medium' | 'heavy' | 'shield'
 
 interface Character {
@@ -23,12 +21,13 @@ interface Character {
   level: number
 
   // Configuración de reglas
-  ruleset: Ruleset
-  abilityBonusSource: AbilityBonusSource
+  ruleset: string             // siempre "5.5e" — fijo tras el pivote; guardado para fidelidad en save/load
+  abilityBonusSource: string  // siempre "background" en 5.5e — las species no otorgan ASIs
+  asiDistribution: string     // "standard" (+2/+1) | "spread" (+1/+1/+1)
 
   // Núcleo mecánico
   baseStats: Stats       // antes de bonos
-  finalStats: Stats      // después de bonos
+  finalStats: Stats      // después de bonos de background
   modifiers: Modifiers   // calculados sobre finalStats
   derived: DerivedStats
 
@@ -90,6 +89,22 @@ interface NarrativeBlock {
 
 ---
 
+## Background (mecánico — 5.5e)
+
+```typescript
+interface Background {
+  name: string
+  asiPool: [string, string, string]  // ej: ["WIS", "INT", "CON"] — definido por el background
+  originFeat: string                 // feat fijo otorgado por este background (no elegido)
+  tags: string[]                     // tags de coherencia por clase/species; 'any' = universal
+}
+```
+
+`asiPool` define los 3 stats elegibles para el bonus. La distribución (`standard` o `spread`)
+se elige o genera aleatoriamente y se almacena en `Character.asiDistribution`.
+
+---
+
 ## Armadura
 
 ```typescript
@@ -110,7 +125,7 @@ interface ArmorType {
 interface AbilityBonus {
   stat: keyof Stats
   value: number
-  source: 'species' | 'background'
+  source: 'background'  // en 5.5e el único origen de ASIs es el background
 }
 ```
 
@@ -135,14 +150,21 @@ El orquestador preserva los campos bloqueados al regenerar.
 
 ## Resolución de bonos
 
+En 5.5e los ASIs provienen exclusivamente del background. La función recibe el background
+resuelto y la distribución elegida:
+
 ```typescript
-function resolveAbilityBonuses(input, config): AbilityBonus[] {
-  switch (config.abilityBonusSource) {
-    case 'species':    return getSpeciesBonuses(input.species, input.subSpecies)
-    case 'background': return getBackgroundBonuses(input.background)
-    default:           return []
+function resolveAbilityBonuses(background: Background, distribution: 'standard' | 'spread'): AbilityBonus[] {
+  if (distribution === 'spread') {
+    // +1 a los 3 stats del asiPool
+    return background.asiPool.map(stat => ({ stat, value: 1, source: 'background' }))
   }
+  // distribution === 'standard': +2 al primero del pool, +1 al segundo
+  return [
+    { stat: background.asiPool[0], value: 2, source: 'background' },
+    { stat: background.asiPool[1], value: 1, source: 'background' },
+  ]
 }
 ```
 
-MVP opera con: `ruleset: '5e'`, `abilityBonusSource: 'species'`
+El MVP opera con: `ruleset: '5.5e'`, `abilityBonusSource: 'background'`.

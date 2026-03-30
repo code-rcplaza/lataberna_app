@@ -7,7 +7,7 @@ sugerencias o decisiones técnicas. Para detalles operativos ver `docs/`.
 
 ## Qué es este proyecto
 
-Generador de personajes y NPCs para D&D 5e en español.
+Generador de personajes y NPCs para D&D 5.5e (2024 Player's Handbook) en español.
 Nombre tentativo: **La Taberna RPG**.
 Audiencia: jugadores y Dungeon Masters hispanohablantes, nivel principiante a intermedio.
 
@@ -42,8 +42,8 @@ o con cualquier combinación de parámetros restringidos.
 1. Resolver inputs     → usar parámetros provistos o elegir aleatoriamente
 2. Generar baseStats   → según clase resuelta (baseline por clase)
 3. Aplicar variación   → variación controlada ±1/±2 sobre el baseline
-4. Resolver bonos      → resolveAbilityBonuses(species, subSpecies)
-5. Aplicar bonos       → finalStats
+4. Resolver bonos      → background ASI pool (+2/+1 standard O +1/+1/+1 spread)
+5. Aplicar bonos       → finalStats (desde el background ASI pool, no species)
 6. Calcular modifiers  → ⌊(finalStat - 10) / 2⌋ sobre finalStats
 7. Resolver armadura   → classDefaultArmor según competencia de clase
 8. Calcular derived    → HP = hit_die + modifiers.CON
@@ -54,7 +54,8 @@ o con cualquier combinación de parámetros restringidos.
 Reglas invariables del pipeline:
 - Los modifiers se calculan **siempre** sobre `finalStats`, nunca sobre `baseStats`
 - La narrativa **siempre** recibe class y species como contexto de filtrado
-- Los bonos **nunca** viven dentro de la species — son un resultado de resolución
+- Los bonos **siempre** provienen del background (ASI pool) — las species NO otorgan bonos de estadísticas en 5.5e
+- Los bonos **nunca** viven dentro de la species — son un resultado de resolución del background
 
 ---
 
@@ -63,10 +64,13 @@ Reglas invariables del pipeline:
 | Decisión | Razón |
 |---|---|
 | Todo parámetro es opcional | Minimizar fricción, maximizar aleatoriedad útil |
-| Bonos desacoplados de species | Soportar 5.5e sin reescribir el motor |
+| Ruleset fijo en "5.5e" | Pivote al 2024 PHB — posición de mercado más fuerte para contenido en español |
+| Backgrounds proveen ASIs, no species | Regla central de 5.5e; species solo otorgan rasgos/habilidades raciales |
+| `ASIDistribution` en Character | "standard" (+2/+1) o "spread" (+1/+1/+1); guardado en la entidad para fidelidad en save/load |
+| `OriginFeat` fijo por background | Determinado por la definición del background, no elegido por el jugador; simplifica la generación |
 | `baseStats` separado de `finalStats` | Escalabilidad de nivel y multiclase |
 | Modifiers sobre `finalStats` | Orden correcto del pipeline |
-| Narrativa filtrada por class/species | Coherencia en generaciones aleatorias |
+| Narrativa filtrada por class/species | Coherencia en generaciones aleatorias; mismo patrón de Tags aplica a Background |
 | `ArmorType` como recurso, no lógica de clase | DRY, preparado para inventario |
 | Magic link sobre sesión anónima | Persistencia real sin perder datos al borrar cookies |
 | SQLite en MVP | Simplicidad — migración a Postgres post-validación |
@@ -198,8 +202,11 @@ newChar.Regenerate(locks)
 
 
 ```typescript
-// ❌ Bonos dentro de la species
+// ❌ Bonos dentro de la species (5e legacy — inválido en 5.5e)
 Elf = { bonus: { DEX: +2 } }
+
+// ❌ Bonos de species en lugar de background ASI pool
+resolveAbilityBonuses(species, subSpecies)  // debe resolverse desde el background
 
 // ❌ Mezclar base con final
 stats = generateStatsWithBonuses()

@@ -82,14 +82,14 @@ Un personaje guardado debe ser siempre recuperable en el estado exacto en que fu
 ## Escalabilidad
 
 ### RNF-04-001 — Extensibilidad del motor de generación
-El motor debe soportar agregar nuevas clases, species o rulesets sin cambios estructurales.
+El motor debe soportar agregar nuevas clases, species o backgrounds sin cambios estructurales.
 
 **Criterios de aceptación:**
 - Agregar una nueva clase requiere solo agregar datos (baseline, hit die, armadura)
   sin modificar la lógica del pipeline.
-- Agregar una nueva species requiere solo agregar datos (nombres, bonos)
-  sin modificar la lógica del generador.
-- Soportar un nuevo ruleset (ej: 5.5e) requiere solo cambiar `abilityBonusSource`
+- Agregar una nueva species requiere solo agregar datos (nombres, rasgos raciales)
+  sin modificar la lógica del generador — las species no aportan ASIs en 5.5e.
+- Agregar un nuevo background requiere solo agregar datos (asiPool, originFeat, tags)
   sin modificar el pipeline.
 
 ---

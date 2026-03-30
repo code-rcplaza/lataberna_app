@@ -1,7 +1,7 @@
 # rpg_engine — Scope del MVP (v3, definitivo)
 
 ## Nombre tentativo
-**La Taberna RPG** — Generador de contenido RPG en español para D&D 5e
+**La Taberna RPG** — Generador de contenido RPG en español para D&D 5.5e (2024 PHB)
 
 ---
 
@@ -24,7 +24,7 @@ contenido al vuelo y perder tiempo en preparación.
 ---
 
 ## Usuario objetivo
-**Primario:** DMs y jugadores de D&D 5e hispanohablantes, nivel principiante a intermedio.
+**Primario:** DMs y jugadores de D&D 5.5e (2024 PHB) hispanohablantes, nivel principiante a intermedio.
 **Flujo unificado:** el mismo generador sirve para crear un personaje propio (PC)
 o un NPC para la sesión. La diferencia es intencional, no técnica.
 
@@ -159,7 +159,8 @@ AC = 10 + modifiers.DEX + modifiers.WIS
 **Método de generación de stats:**
 - Baseline por clase (array [STR, DEX, CON, INT, WIS, CHA]) → `baseStats`
 - Variación controlada ±1/±2 sobre el baseline
-- Los bonos de species se resuelven vía `resolveAbilityBonuses` → `finalStats`
+- Los ASIs del background (ASI pool) se aplican vía `resolveAbilityBonuses` → `finalStats`
+- Las species NO otorgan ASIs en 5.5e — solo rasgos raciales
 - Coherencia sobre aleatoriedad pura
 
 **Baselines por clase:**
@@ -255,8 +256,8 @@ Ejecuta el pipeline completo de generación en orden:
 1. Resolver inputs     → usar parámetros provistos o elegir aleatoriamente
 2. Generar baseStats   → según clase resuelta
 3. Aplicar variación   → variación controlada ±1/±2
-4. Resolver bonos      → resolveAbilityBonuses(species, subSpecies)
-5. Aplicar bonos       → finalStats
+4. Resolver bonos      → background ASI pool (+2/+1 standard O +1/+1/+1 spread)
+5. Aplicar bonos       → finalStats (desde el background ASI pool, no species)
 6. Calcular modifiers  → sobre finalStats
 7. Resolver armadura   → classDefaultArmor según competencia de clase
 8. Calcular derived    → HP = hit_die + modifiers.CON
@@ -305,9 +306,6 @@ parcial del Módulo 5 sin lógica adicional.
 ### Entidad principal: Character
 
 ```typescript
-type Ruleset = '5e' | '5.5e'
-type AbilityBonusSource = 'species' | 'background' | 'none'
-
 interface Character {
   id: string
 
@@ -319,12 +317,13 @@ interface Character {
   level: number
 
   // Configuración de reglas
-  ruleset: Ruleset
-  abilityBonusSource: AbilityBonusSource
+  ruleset: string             // siempre "5.5e" — fijo tras el pivote
+  abilityBonusSource: string  // siempre "background" en 5.5e
+  asiDistribution: string     // "standard" (+2/+1) | "spread" (+1/+1/+1)
 
   // Núcleo mecánico
   baseStats: Stats       // antes de bonos
-  finalStats: Stats      // después de bonos
+  finalStats: Stats      // después de bonos de background
   modifiers: Modifiers
   derived: DerivedStats  // HP, AC
 
@@ -397,12 +396,23 @@ interface CharacterLocks {
 interface AbilityBonus {
   stat: keyof Stats
   value: number
-  source: 'species' | 'background'
+  source: 'background'  // en 5.5e el único origen de ASIs es el background
 }
 ```
 
-Los bonos no viven dentro de la raza ni del background — son un resultado
-de resolución. Esto permite cambiar el ruleset sin tocar la lógica del generador.
+Los bonos no viven dentro de la raza ni de la clase — son un resultado
+de resolución del background. Esto mantiene el pipeline limpio y extensible.
+
+### Background (mecánico — 5.5e)
+
+```typescript
+interface Background {
+  name: string
+  asiPool: [string, string, string]  // 3 stats elegibles para el bonus
+  originFeat: string                 // feat fijo otorgado por este background
+  tags: string[]                     // coherencia por clase/species; 'any' = universal
+}
+```
 
 ### Pipeline de generación
 
@@ -410,8 +420,8 @@ de resolución. Esto permite cambiar el ruleset sin tocar la lógica del generad
 1. Resolver inputs     → usar parámetros provistos o elegir aleatoriamente
 2. Generar baseStats   → según clase resuelta
 3. Aplicar variación   → variación controlada ±1/±2
-4. Resolver bonos      → según ruleset y abilityBonusSource
-5. Aplicar bonos       → finalStats
+4. Resolver bonos      → background ASI pool (+2/+1 standard O +1/+1/+1 spread)
+5. Aplicar bonos       → finalStats (desde el background ASI pool, no species)
 6. Calcular modifiers  → ⌊(stat - 10) / 2⌋ sobre finalStats
 7. Resolver armadura   → classDefaultArmor según competencia de clase
 8. Calcular derived    → HP = hit_die + modifiers.CON
@@ -423,17 +433,18 @@ de resolución. Esto permite cambiar el ruleset sin tocar la lógica del generad
 ### Resolución de bonos
 
 ```typescript
-function resolveAbilityBonuses(input, config): AbilityBonus[] {
-  switch (config.abilityBonusSource) {
-    case 'species':    return getSpeciesBonuses(input.species, input.subSpecies)
-    case 'background': return getBackgroundBonuses(input.background)
-    default:           return []
+function resolveAbilityBonuses(background: Background, distribution: 'standard' | 'spread'): AbilityBonus[] {
+  if (distribution === 'spread') {
+    return background.asiPool.map(stat => ({ stat, value: 1, source: 'background' }))
   }
+  return [
+    { stat: background.asiPool[0], value: 2, source: 'background' },
+    { stat: background.asiPool[1], value: 1, source: 'background' },
+  ]
 }
 ```
 
-El MVP opera con `ruleset: '5e'` y `abilityBonusSource: 'species'`.
-Soportar 5.5e solo requiere agregar backgrounds mecánicos y cambiar `abilityBonusSource`.
+El MVP opera con `ruleset: '5.5e'` y `abilityBonusSource: 'background'`.
 
 ### Anti-patrones a evitar
 
