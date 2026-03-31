@@ -141,7 +141,54 @@ func migrate(db *sql.DB) error {
 		}
 	}
 
+	// Step 5: Add background_type and asi_distribution columns to characters if missing.
+	needsBGType, err := charactersNeedsCol(db, "background_type")
+	if err != nil {
+		return fmt.Errorf("migrate: check background_type col: %w", err)
+	}
+	if needsBGType {
+		if _, err := db.Exec(
+			`ALTER TABLE characters ADD COLUMN background_type TEXT NOT NULL DEFAULT ''`,
+		); err != nil {
+			return fmt.Errorf("migrate: add background_type: %w", err)
+		}
+	}
+
+	needsASIDist, err := charactersNeedsCol(db, "asi_distribution")
+	if err != nil {
+		return fmt.Errorf("migrate: check asi_distribution col: %w", err)
+	}
+	if needsASIDist {
+		if _, err := db.Exec(
+			`ALTER TABLE characters ADD COLUMN asi_distribution TEXT NOT NULL DEFAULT 'standard'`,
+		); err != nil {
+			return fmt.Errorf("migrate: add asi_distribution: %w", err)
+		}
+	}
+
 	return nil
+}
+
+// charactersNeedsCol reports whether the characters table is missing the given column.
+func charactersNeedsCol(db *sql.DB, colName string) (bool, error) {
+	rows, err := db.Query(`PRAGMA table_info(characters)`)
+	if err != nil {
+		return false, fmt.Errorf("charactersNeedsCol: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cid, notNull, pk int
+		var name, colType string
+		var dfltValue sql.NullString
+		if err := rows.Scan(&cid, &name, &colType, &notNull, &dfltValue, &pk); err != nil {
+			return false, fmt.Errorf("charactersNeedsCol: scan: %w", err)
+		}
+		if name == colName {
+			return false, nil
+		}
+	}
+	return true, rows.Err()
 }
 
 // seedVersionNeedsNarrativeCol reports whether seed_version is missing the narrative_version column.

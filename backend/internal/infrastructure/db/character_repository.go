@@ -36,15 +36,16 @@ func (r *CharacterRepository) Save(ctx context.Context, c *domain.Character) err
 	const q = `
 INSERT INTO characters (
 	id, user_id, name, species, sub_species, class, level,
-	ruleset, ability_bonus_source,
+	ruleset, ability_bonus_source, background_type, asi_distribution,
 	base_stats, final_stats, modifiers, derived,
 	background, motivation, secret, locks,
 	seed, created_at, updated_at
-) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
 
 	_, err = r.db.ExecContext(ctx, q,
 		row.id, row.userID, row.name, row.species, row.subSpecies,
 		row.class, row.level, row.ruleset, row.abilityBonusSource,
+		row.backgroundType, row.asiDistribution,
 		row.baseStats, row.finalStats, row.modifiers, row.derived,
 		row.background, row.motivation, row.secret, row.locks,
 		row.seed, row.createdAt, row.updatedAt,
@@ -59,7 +60,7 @@ INSERT INTO characters (
 func (r *CharacterRepository) FindByID(ctx context.Context, id string) (*domain.Character, error) {
 	const q = `
 SELECT id, user_id, name, species, sub_species, class, level,
-       ruleset, ability_bonus_source,
+       ruleset, ability_bonus_source, background_type, asi_distribution,
        base_stats, final_stats, modifiers, derived,
        background, motivation, secret, locks,
        seed, created_at, updated_at
@@ -78,7 +79,7 @@ FROM characters WHERE id = ? LIMIT 1`
 func (r *CharacterRepository) FindByUserID(ctx context.Context, userID string) ([]*domain.Character, error) {
 	const q = `
 SELECT id, user_id, name, species, sub_species, class, level,
-       ruleset, ability_bonus_source,
+       ruleset, ability_bonus_source, background_type, asi_distribution,
        base_stats, final_stats, modifiers, derived,
        background, motivation, secret, locks,
        seed, created_at, updated_at
@@ -114,7 +115,7 @@ func (r *CharacterRepository) Update(ctx context.Context, c *domain.Character) e
 	const q = `
 UPDATE characters SET
 	user_id = ?, name = ?, species = ?, sub_species = ?, class = ?, level = ?,
-	ruleset = ?, ability_bonus_source = ?,
+	ruleset = ?, ability_bonus_source = ?, background_type = ?, asi_distribution = ?,
 	base_stats = ?, final_stats = ?, modifiers = ?, derived = ?,
 	background = ?, motivation = ?, secret = ?, locks = ?,
 	seed = ?, updated_at = ?
@@ -122,7 +123,7 @@ WHERE id = ?`
 
 	res, err := r.db.ExecContext(ctx, q,
 		row.userID, row.name, row.species, row.subSpecies, row.class, row.level,
-		row.ruleset, row.abilityBonusSource,
+		row.ruleset, row.abilityBonusSource, row.backgroundType, row.asiDistribution,
 		row.baseStats, row.finalStats, row.modifiers, row.derived,
 		row.background, row.motivation, row.secret, row.locks,
 		row.seed, row.updatedAt,
@@ -166,6 +167,8 @@ type dbCharacterRow struct {
 	level              int
 	ruleset            string
 	abilityBonusSource string
+	backgroundType     string
+	asiDistribution    string
 	baseStats          string
 	finalStats         string
 	modifiers          string
@@ -237,6 +240,8 @@ func marshalCharacter(c *domain.Character) (*dbCharacterRow, error) {
 		level:              c.Level,
 		ruleset:            string(c.Ruleset),
 		abilityBonusSource: string(c.AbilityBonusSource),
+		backgroundType:     c.BackgroundType,
+		asiDistribution:    c.ASIDistribution,
 		baseStats:          baseStats,
 		finalStats:         finalStats,
 		modifiers:          modifiers,
@@ -263,6 +268,7 @@ func scanCharacter(s scanner) (*domain.Character, error) {
 	err := s.Scan(
 		&row.id, &row.userID, &row.name, &row.species, &row.subSpecies,
 		&row.class, &row.level, &row.ruleset, &row.abilityBonusSource,
+		&row.backgroundType, &row.asiDistribution,
 		&row.baseStats, &row.finalStats, &row.modifiers, &row.derived,
 		&row.background, &row.motivation, &row.secret, &row.locks,
 		&row.seed, &createdAt, &updatedAt,
@@ -287,6 +293,8 @@ func scanCharacter(s scanner) (*domain.Character, error) {
 	c.Level = row.level
 	c.Ruleset = domain.Ruleset(row.ruleset)
 	c.AbilityBonusSource = domain.AbilityBonusSource(row.abilityBonusSource)
+	c.BackgroundType = row.backgroundType
+	c.ASIDistribution = row.asiDistribution
 	c.Seed = row.seed
 
 	if row.subSpecies != nil {
