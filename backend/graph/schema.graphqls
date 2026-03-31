@@ -44,6 +44,9 @@ type Character {
   secret: NarrativeBlock!
   locks: CharacterLocks!
   seed: Int
+  backgroundType: String!
+  asiDistribution: String!
+  originFeat: String!
   createdAt: String!
   updatedAt: String!
 }

@@ -131,6 +131,17 @@ func AllBackgrounds() []BackgroundEntry {
 	return backgroundTable
 }
 
+// OriginFeatFor returns the origin feat for the given background name.
+// Returns an empty string if the background is not found.
+func OriginFeatFor(backgroundName string) string {
+	for _, b := range backgroundTable {
+		if b.Name == backgroundName {
+			return b.OriginFeat
+		}
+	}
+	return ""
+}
+
 // allClasses returns a stable slice of all valid classes for random selection.
 func allClasses() []domain.Class {
 	return []domain.Class{
