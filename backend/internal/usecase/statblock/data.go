@@ -8,7 +8,7 @@ import (
 
 // BackgroundEntry represents a D&D 5.5e background with its mechanical properties.
 type BackgroundEntry struct {
-	Name       string    // display name (e.g., "Acolyte")
+	Name       string    // display name in Spanish (e.g., "Acólito")
 	ASIPool    [3]string // the three stats the background can boost, e.g., ["WIS", "INT", "CHA"]
 	OriginFeat string    // fixed feat granted at level 1
 	Tags       []string  // class/species coherence tags; "any" = universal
@@ -93,23 +93,24 @@ var armorTable = map[string]domain.ArmorType{
 
 // backgroundTable holds the D&D 5.5e (2024 PHB) backgrounds used for ASI and feat resolution.
 // Order is stable — index 0..15 maps to the 16 canonical backgrounds.
+// Names and origin feats are in Spanish, matching backgrounds.md.
 var backgroundTable = []BackgroundEntry{
-	{Name: "Acolyte",    ASIPool: [3]string{"WIS", "INT", "CHA"}, OriginFeat: "Magic Initiate (Cleric)",  Tags: []string{"cleric", "paladin", "druid"}},
-	{Name: "Artisan",    ASIPool: [3]string{"STR", "DEX", "INT"}, OriginFeat: "Crafter",                  Tags: []string{"any"}},
-	{Name: "Charlatan",  ASIPool: [3]string{"DEX", "CON", "CHA"}, OriginFeat: "Lucky",                    Tags: []string{"rogue", "bard", "warlock"}},
-	{Name: "Criminal",   ASIPool: [3]string{"DEX", "CON", "INT"}, OriginFeat: "Alert",                    Tags: []string{"rogue", "ranger", "warlock"}},
-	{Name: "Entertainer",ASIPool: [3]string{"STR", "DEX", "CHA"}, OriginFeat: "Musician",                 Tags: []string{"bard", "rogue", "sorcerer"}},
-	{Name: "Farmer",     ASIPool: [3]string{"STR", "CON", "WIS"}, OriginFeat: "Tough",                    Tags: []string{"any"}},
-	{Name: "Guard",      ASIPool: [3]string{"STR", "INT", "CHA"}, OriginFeat: "Alert",                    Tags: []string{"fighter", "paladin", "ranger"}},
-	{Name: "Guide",      ASIPool: [3]string{"DEX", "CON", "WIS"}, OriginFeat: "Magic Initiate (Druid)",   Tags: []string{"ranger", "druid", "monk"}},
-	{Name: "Hermit",     ASIPool: [3]string{"CON", "WIS", "CHA"}, OriginFeat: "Healer",                   Tags: []string{"druid", "monk", "cleric"}},
-	{Name: "Merchant",   ASIPool: [3]string{"CON", "INT", "CHA"}, OriginFeat: "Lucky",                    Tags: []string{"any"}},
-	{Name: "Noble",      ASIPool: [3]string{"STR", "INT", "CHA"}, OriginFeat: "Musician",                 Tags: []string{"paladin", "fighter", "bard", "warlock"}},
-	{Name: "Sage",       ASIPool: [3]string{"CON", "INT", "WIS"}, OriginFeat: "Magic Initiate (Wizard)",  Tags: []string{"wizard", "sorcerer", "artificer"}},
-	{Name: "Sailor",     ASIPool: [3]string{"STR", "DEX", "WIS"}, OriginFeat: "Tavern Brawler",           Tags: []string{"any"}},
-	{Name: "Scribe",     ASIPool: [3]string{"DEX", "INT", "WIS"}, OriginFeat: "Magic Initiate (Wizard)",  Tags: []string{"wizard", "artificer", "cleric"}},
-	{Name: "Soldier",    ASIPool: [3]string{"STR", "DEX", "CON"}, OriginFeat: "Savage Attacker",          Tags: []string{"fighter", "paladin", "ranger", "barbarian"}},
-	{Name: "Wayfarer",   ASIPool: [3]string{"DEX", "WIS", "CHA"}, OriginFeat: "Magic Initiate (Druid)",   Tags: []string{"rogue", "ranger", "bard", "monk"}},
+	{Name: "Acólito",   ASIPool: [3]string{"WIS", "INT", "CHA"}, OriginFeat: "Iniciado en la magia (Clérigo)", Tags: []string{"cleric", "paladin", "druid"}},
+	{Name: "Artesano",  ASIPool: [3]string{"STR", "DEX", "INT"}, OriginFeat: "Fabricante",                     Tags: []string{"any"}},
+	{Name: "Charlatán", ASIPool: [3]string{"DEX", "CON", "CHA"}, OriginFeat: "Afortunado",                     Tags: []string{"rogue", "bard", "warlock"}},
+	{Name: "Criminal",  ASIPool: [3]string{"DEX", "CON", "INT"}, OriginFeat: "Alerta",                         Tags: []string{"rogue", "ranger", "warlock"}},
+	{Name: "Animador",  ASIPool: [3]string{"STR", "DEX", "CHA"}, OriginFeat: "Músico",                         Tags: []string{"bard", "rogue", "sorcerer"}},
+	{Name: "Campesino", ASIPool: [3]string{"STR", "CON", "WIS"}, OriginFeat: "Duro",                           Tags: []string{"any"}},
+	{Name: "Guardia",   ASIPool: [3]string{"STR", "INT", "CHA"}, OriginFeat: "Alerta",                         Tags: []string{"fighter", "paladin", "ranger"}},
+	{Name: "Guía",      ASIPool: [3]string{"DEX", "CON", "WIS"}, OriginFeat: "Iniciado en la magia (Druida)",  Tags: []string{"ranger", "druid", "monk"}},
+	{Name: "Ermitaño",  ASIPool: [3]string{"CON", "WIS", "CHA"}, OriginFeat: "Sanador",                        Tags: []string{"druid", "monk", "cleric"}},
+	{Name: "Comerciante", ASIPool: [3]string{"CON", "INT", "CHA"}, OriginFeat: "Afortunado",                   Tags: []string{"any"}},
+	{Name: "Noble",     ASIPool: [3]string{"STR", "INT", "CHA"}, OriginFeat: "Músico",                         Tags: []string{"paladin", "fighter", "bard", "warlock"}},
+	{Name: "Erudito",   ASIPool: [3]string{"CON", "INT", "WIS"}, OriginFeat: "Iniciado en la magia (Mago)",    Tags: []string{"wizard", "sorcerer", "artificer"}},
+	{Name: "Marinero",  ASIPool: [3]string{"STR", "DEX", "WIS"}, OriginFeat: "Tabernero Peleón",               Tags: []string{"any"}},
+	{Name: "Escriba",   ASIPool: [3]string{"DEX", "INT", "WIS"}, OriginFeat: "Iniciado en la magia (Mago)",    Tags: []string{"wizard", "artificer", "cleric"}},
+	{Name: "Soldado",   ASIPool: [3]string{"STR", "DEX", "CON"}, OriginFeat: "Atacante Salvaje",               Tags: []string{"fighter", "paladin", "ranger", "barbarian"}},
+	{Name: "Vagabundo", ASIPool: [3]string{"DEX", "WIS", "CHA"}, OriginFeat: "Iniciado en la magia (Druida)",  Tags: []string{"rogue", "ranger", "bard", "monk"}},
 }
 
 // BackgroundsForClass returns all backgrounds whose tags include the given class or "any".
