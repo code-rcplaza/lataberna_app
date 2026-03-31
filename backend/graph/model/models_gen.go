@@ -8,27 +8,28 @@ type AuthPayload struct {
 }
 
 type Character struct {
-	ID              string          `json:"id"`
-	Name            string          `json:"name"`
-	Species         string          `json:"species"`
-	SubSpecies      *string         `json:"subSpecies,omitempty"`
-	Class           string          `json:"class"`
-	Level           int             `json:"level"`
-	Ruleset         string          `json:"ruleset"`
-	BaseStats       *Stats          `json:"baseStats"`
-	FinalStats      *Stats          `json:"finalStats"`
-	Modifiers       *Stats          `json:"modifiers"`
-	Derived         *DerivedStats   `json:"derived"`
-	Background      *NarrativeBlock `json:"background"`
-	Motivation      *NarrativeBlock `json:"motivation"`
-	Secret          *NarrativeBlock `json:"secret"`
-	Locks           *CharacterLocks `json:"locks"`
-	Seed            *int            `json:"seed,omitempty"`
-	BackgroundType  string          `json:"backgroundType"`
-	AsiDistribution string          `json:"asiDistribution"`
-	OriginFeat      string          `json:"originFeat"`
-	CreatedAt       string          `json:"createdAt"`
-	UpdatedAt       string          `json:"updatedAt"`
+	ID                    string          `json:"id"`
+	Name                  string          `json:"name"`
+	Species               string          `json:"species"`
+	SubSpecies            *string         `json:"subSpecies,omitempty"`
+	Class                 string          `json:"class"`
+	Level                 int             `json:"level"`
+	Ruleset               string          `json:"ruleset"`
+	BaseStats             *Stats          `json:"baseStats"`
+	FinalStats            *Stats          `json:"finalStats"`
+	Modifiers             *Stats          `json:"modifiers"`
+	Derived               *DerivedStats   `json:"derived"`
+	Background            *NarrativeBlock `json:"background"`
+	Motivation            *NarrativeBlock `json:"motivation"`
+	Secret                *NarrativeBlock `json:"secret"`
+	Locks                 *CharacterLocks `json:"locks"`
+	Seed                  *int            `json:"seed,omitempty"`
+	BackgroundType        string          `json:"backgroundType"`
+	AsiDistribution       string          `json:"asiDistribution"`
+	OriginFeat            string          `json:"originFeat"`
+	BackgroundDescription string          `json:"backgroundDescription"`
+	CreatedAt             string          `json:"createdAt"`
+	UpdatedAt             string          `json:"updatedAt"`
 }
 
 type CharacterLocks struct {

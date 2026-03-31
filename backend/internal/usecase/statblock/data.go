@@ -8,10 +8,11 @@ import (
 
 // BackgroundEntry represents a D&D 5.5e background with its mechanical properties.
 type BackgroundEntry struct {
-	Name       string    // display name in Spanish (e.g., "Acólito")
-	ASIPool    [3]string // the three stats the background can boost, e.g., ["WIS", "INT", "CHA"]
-	OriginFeat string    // fixed feat granted at level 1
-	Tags       []string  // class/species coherence tags; "any" = universal
+	Name        string    // display name in Spanish (e.g., "Acólito")
+	ASIPool     [3]string // the three stats the background can boost, e.g., ["WIS", "INT", "CHA"]
+	OriginFeat  string    // fixed feat granted at level 1
+	Description string    // short description of the origin feat benefit
+	Tags        []string  // class/species coherence tags; "any" = universal
 }
 
 // classData holds the static class configuration for stat generation.
@@ -95,22 +96,22 @@ var armorTable = map[string]domain.ArmorType{
 // Order is stable — index 0..15 maps to the 16 canonical backgrounds.
 // Names and origin feats are in Spanish, matching backgrounds.md.
 var backgroundTable = []BackgroundEntry{
-	{Name: "Acólito",   ASIPool: [3]string{"WIS", "INT", "CHA"}, OriginFeat: "Iniciado en la magia (Clérigo)", Tags: []string{"cleric", "paladin", "druid"}},
-	{Name: "Artesano",  ASIPool: [3]string{"STR", "DEX", "INT"}, OriginFeat: "Fabricante",                     Tags: []string{"any"}},
-	{Name: "Charlatán", ASIPool: [3]string{"DEX", "CON", "CHA"}, OriginFeat: "Afortunado",                     Tags: []string{"rogue", "bard", "warlock"}},
-	{Name: "Criminal",  ASIPool: [3]string{"DEX", "CON", "INT"}, OriginFeat: "Alerta",                         Tags: []string{"rogue", "ranger", "warlock"}},
-	{Name: "Animador",  ASIPool: [3]string{"STR", "DEX", "CHA"}, OriginFeat: "Músico",                         Tags: []string{"bard", "rogue", "sorcerer"}},
-	{Name: "Campesino", ASIPool: [3]string{"STR", "CON", "WIS"}, OriginFeat: "Duro",                           Tags: []string{"any"}},
-	{Name: "Guardia",   ASIPool: [3]string{"STR", "INT", "CHA"}, OriginFeat: "Alerta",                         Tags: []string{"fighter", "paladin", "ranger"}},
-	{Name: "Guía",      ASIPool: [3]string{"DEX", "CON", "WIS"}, OriginFeat: "Iniciado en la magia (Druida)",  Tags: []string{"ranger", "druid", "monk"}},
-	{Name: "Ermitaño",  ASIPool: [3]string{"CON", "WIS", "CHA"}, OriginFeat: "Sanador",                        Tags: []string{"druid", "monk", "cleric"}},
-	{Name: "Comerciante", ASIPool: [3]string{"CON", "INT", "CHA"}, OriginFeat: "Afortunado",                   Tags: []string{"any"}},
-	{Name: "Noble",     ASIPool: [3]string{"STR", "INT", "CHA"}, OriginFeat: "Músico",                         Tags: []string{"paladin", "fighter", "bard", "warlock"}},
-	{Name: "Erudito",   ASIPool: [3]string{"CON", "INT", "WIS"}, OriginFeat: "Iniciado en la magia (Mago)",    Tags: []string{"wizard", "sorcerer", "artificer"}},
-	{Name: "Marinero",  ASIPool: [3]string{"STR", "DEX", "WIS"}, OriginFeat: "Tabernero Peleón",               Tags: []string{"any"}},
-	{Name: "Escriba",   ASIPool: [3]string{"DEX", "INT", "WIS"}, OriginFeat: "Iniciado en la magia (Mago)",    Tags: []string{"wizard", "artificer", "cleric"}},
-	{Name: "Soldado",   ASIPool: [3]string{"STR", "DEX", "CON"}, OriginFeat: "Atacante Salvaje",               Tags: []string{"fighter", "paladin", "ranger", "barbarian"}},
-	{Name: "Vagabundo", ASIPool: [3]string{"DEX", "WIS", "CHA"}, OriginFeat: "Iniciado en la magia (Druida)",  Tags: []string{"rogue", "ranger", "bard", "monk"}},
+	{Name: "Acólito",    ASIPool: [3]string{"WIS", "INT", "CHA"}, OriginFeat: "Iniciado en la magia (Clérigo)", Description: "Obtienes 2 trucos y un conjuro de nivel 1 de la lista de Clérigo.",                                                            Tags: []string{"cleric", "paladin", "druid"}},
+	{Name: "Artesano",   ASIPool: [3]string{"STR", "DEX", "INT"}, OriginFeat: "Fabricante",                     Description: "Competencia con 3 herramientas, 20% de descuento en compras y fabricas objetos rápido.",                                    Tags: []string{"any"}},
+	{Name: "Charlatán",  ASIPool: [3]string{"DEX", "CON", "CHA"}, OriginFeat: "Afortunado",                     Description: "Tienes puntos de suerte (igual a tu BC) para ganar ventaja o dar desventaja a atacantes.",                                  Tags: []string{"rogue", "bard", "warlock"}},
+	{Name: "Criminal",   ASIPool: [3]string{"DEX", "CON", "INT"}, OriginFeat: "Alerta",                         Description: "Sumas tu BC a la iniciativa y puedes intercambiar tu iniciativa con un aliado.",                                            Tags: []string{"rogue", "ranger", "warlock"}},
+	{Name: "Animador",   ASIPool: [3]string{"STR", "DEX", "CHA"}, OriginFeat: "Músico",                         Description: "Competencia con 3 instrumentos y das Inspiración Heroica a aliados tras un descanso.",                                      Tags: []string{"bard", "rogue", "sorcerer"}},
+	{Name: "Campesino",  ASIPool: [3]string{"STR", "CON", "WIS"}, OriginFeat: "Duro",                           Description: "Tus puntos de golpe máximos aumentan en 2 por cada nivel que tengas.",                                                      Tags: []string{"any"}},
+	{Name: "Guardia",    ASIPool: [3]string{"STR", "INT", "CHA"}, OriginFeat: "Alerta",                         Description: "Sumas tu BC a la iniciativa y puedes intercambiar tu iniciativa con un aliado.",                                            Tags: []string{"fighter", "paladin", "ranger"}},
+	{Name: "Guía",       ASIPool: [3]string{"DEX", "CON", "WIS"}, OriginFeat: "Iniciado en la magia (Druida)",  Description: "Obtienes 2 trucos y un conjuro de nivel 1 de la lista de Druida.",                                                          Tags: []string{"ranger", "druid", "monk"}},
+	{Name: "Ermitaño",   ASIPool: [3]string{"CON", "WIS", "CHA"}, OriginFeat: "Sanador",                        Description: "Puedes usar útiles de sanador para que un aliado gaste un dado de golpe y se cure; repites \"1\" en curaciones.",            Tags: []string{"druid", "monk", "cleric"}},
+	{Name: "Comerciante", ASIPool: [3]string{"CON", "INT", "CHA"}, OriginFeat: "Afortunado",                   Description: "Tienes puntos de suerte (igual a tu BC) para ganar ventaja o dar desventaja a atacantes.",                                   Tags: []string{"any"}},
+	{Name: "Noble",      ASIPool: [3]string{"STR", "INT", "CHA"}, OriginFeat: "Músico",                         Description: "Competencia con 3 instrumentos y das Inspiración Heroica a aliados tras un descanso.",                                      Tags: []string{"paladin", "fighter", "bard", "warlock"}},
+	{Name: "Erudito",    ASIPool: [3]string{"CON", "INT", "WIS"}, OriginFeat: "Iniciado en la magia (Mago)",    Description: "Obtienes 2 trucos y un conjuro de nivel 1 de la lista de Mago.",                                                            Tags: []string{"wizard", "sorcerer", "artificer"}},
+	{Name: "Marinero",   ASIPool: [3]string{"STR", "DEX", "WIS"}, OriginFeat: "Tabernero Peleón",               Description: "Tus ataques desarmados son 1d4, repites \"1\" en su daño y puedes empujar 1.5m al golpear.",                                Tags: []string{"any"}},
+	{Name: "Escriba",    ASIPool: [3]string{"DEX", "INT", "WIS"}, OriginFeat: "Iniciado en la magia (Mago)",    Description: "Obtienes 2 trucos y un conjuro de nivel 1 de la lista de Mago.",                                                            Tags: []string{"wizard", "artificer", "cleric"}},
+	{Name: "Soldado",    ASIPool: [3]string{"STR", "DEX", "CON"}, OriginFeat: "Atacante Salvaje",               Description: "Una vez por turno, al acertar con un arma, tiras dos veces el daño y eliges el mayor.",                                    Tags: []string{"fighter", "paladin", "ranger", "barbarian"}},
+	{Name: "Vagabundo",  ASIPool: [3]string{"DEX", "WIS", "CHA"}, OriginFeat: "Iniciado en la magia (Druida)",  Description: "Obtienes 2 trucos y un conjuro de nivel 1 de la lista de Druida.",                                                          Tags: []string{"rogue", "ranger", "bard", "monk"}},
 }
 
 // BackgroundsForClass returns all backgrounds whose tags include the given class or "any".
@@ -138,6 +139,17 @@ func OriginFeatFor(backgroundName string) string {
 	for _, b := range backgroundTable {
 		if b.Name == backgroundName {
 			return b.OriginFeat
+		}
+	}
+	return ""
+}
+
+// BackgroundDescriptionFor returns the origin feat description for the given background name.
+// Returns an empty string if the background is not found.
+func BackgroundDescriptionFor(name string) string {
+	for _, b := range backgroundTable {
+		if b.Name == name {
+			return b.Description
 		}
 	}
 	return ""

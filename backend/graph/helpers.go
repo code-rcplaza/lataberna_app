@@ -90,9 +90,10 @@ func toModelCharacter(c *domain.Character) *model.Character {
 			Motivation: c.Locks.Motivation,
 			Secret:     c.Locks.Secret,
 		},
-		BackgroundType:  c.BackgroundType,
-		AsiDistribution: c.ASIDistribution,
-		OriginFeat:      statblock.OriginFeatFor(c.BackgroundType),
+		BackgroundType:        c.BackgroundType,
+		AsiDistribution:       c.ASIDistribution,
+		OriginFeat:            statblock.OriginFeatFor(c.BackgroundType),
+		BackgroundDescription: statblock.BackgroundDescriptionFor(c.BackgroundType),
 		CreatedAt:       c.CreatedAt.UTC().Format(time.RFC3339),
 		UpdatedAt:       c.UpdatedAt.UTC().Format(time.RFC3339),
 	}

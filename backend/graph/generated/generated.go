@@ -41,27 +41,28 @@ type ComplexityRoot struct {
 	}
 
 	Character struct {
-		AsiDistribution func(childComplexity int) int
-		Background      func(childComplexity int) int
-		BackgroundType  func(childComplexity int) int
-		BaseStats       func(childComplexity int) int
-		Class           func(childComplexity int) int
-		CreatedAt       func(childComplexity int) int
-		Derived         func(childComplexity int) int
-		FinalStats      func(childComplexity int) int
-		ID              func(childComplexity int) int
-		Level           func(childComplexity int) int
-		Locks           func(childComplexity int) int
-		Modifiers       func(childComplexity int) int
-		Motivation      func(childComplexity int) int
-		Name            func(childComplexity int) int
-		OriginFeat      func(childComplexity int) int
-		Ruleset         func(childComplexity int) int
-		Secret          func(childComplexity int) int
-		Seed            func(childComplexity int) int
-		Species         func(childComplexity int) int
-		SubSpecies      func(childComplexity int) int
-		UpdatedAt       func(childComplexity int) int
+		AsiDistribution       func(childComplexity int) int
+		Background            func(childComplexity int) int
+		BackgroundDescription func(childComplexity int) int
+		BackgroundType        func(childComplexity int) int
+		BaseStats             func(childComplexity int) int
+		Class                 func(childComplexity int) int
+		CreatedAt             func(childComplexity int) int
+		Derived               func(childComplexity int) int
+		FinalStats            func(childComplexity int) int
+		ID                    func(childComplexity int) int
+		Level                 func(childComplexity int) int
+		Locks                 func(childComplexity int) int
+		Modifiers             func(childComplexity int) int
+		Motivation            func(childComplexity int) int
+		Name                  func(childComplexity int) int
+		OriginFeat            func(childComplexity int) int
+		Ruleset               func(childComplexity int) int
+		Secret                func(childComplexity int) int
+		Seed                  func(childComplexity int) int
+		Species               func(childComplexity int) int
+		SubSpecies            func(childComplexity int) int
+		UpdatedAt             func(childComplexity int) int
 	}
 
 	CharacterLocks struct {
@@ -172,6 +173,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Character.Background(childComplexity), true
+	case "Character.backgroundDescription":
+		if e.ComplexityRoot.Character.BackgroundDescription == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Character.BackgroundDescription(childComplexity), true
 	case "Character.backgroundType":
 		if e.ComplexityRoot.Character.BackgroundType == nil {
 			break
@@ -659,6 +666,7 @@ type Character {
   backgroundType: String!
   asiDistribution: String!
   originFeat: String!
+  backgroundDescription: String!
   createdAt: String!
   updatedAt: String!
 }
@@ -1647,6 +1655,35 @@ func (ec *executionContext) fieldContext_Character_originFeat(_ context.Context,
 	return fc, nil
 }
 
+func (ec *executionContext) _Character_backgroundDescription(ctx context.Context, field graphql.CollectedField, obj *model.Character) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Character_backgroundDescription,
+		func(ctx context.Context) (any, error) {
+			return obj.BackgroundDescription, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Character_backgroundDescription(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Character",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Character_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.Character) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -2088,6 +2125,8 @@ func (ec *executionContext) fieldContext_Mutation_generateCharacter(ctx context.
 				return ec.fieldContext_Character_asiDistribution(ctx, field)
 			case "originFeat":
 				return ec.fieldContext_Character_originFeat(ctx, field)
+			case "backgroundDescription":
+				return ec.fieldContext_Character_backgroundDescription(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Character_createdAt(ctx, field)
 			case "updatedAt":
@@ -2173,6 +2212,8 @@ func (ec *executionContext) fieldContext_Mutation_regenerateCharacter(ctx contex
 				return ec.fieldContext_Character_asiDistribution(ctx, field)
 			case "originFeat":
 				return ec.fieldContext_Character_originFeat(ctx, field)
+			case "backgroundDescription":
+				return ec.fieldContext_Character_backgroundDescription(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Character_createdAt(ctx, field)
 			case "updatedAt":
@@ -2258,6 +2299,8 @@ func (ec *executionContext) fieldContext_Mutation_regenerateDraft(ctx context.Co
 				return ec.fieldContext_Character_asiDistribution(ctx, field)
 			case "originFeat":
 				return ec.fieldContext_Character_originFeat(ctx, field)
+			case "backgroundDescription":
+				return ec.fieldContext_Character_backgroundDescription(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Character_createdAt(ctx, field)
 			case "updatedAt":
@@ -2343,6 +2386,8 @@ func (ec *executionContext) fieldContext_Mutation_saveCharacter(ctx context.Cont
 				return ec.fieldContext_Character_asiDistribution(ctx, field)
 			case "originFeat":
 				return ec.fieldContext_Character_originFeat(ctx, field)
+			case "backgroundDescription":
+				return ec.fieldContext_Character_backgroundDescription(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Character_createdAt(ctx, field)
 			case "updatedAt":
@@ -2428,6 +2473,8 @@ func (ec *executionContext) fieldContext_Mutation_editCharacter(ctx context.Cont
 				return ec.fieldContext_Character_asiDistribution(ctx, field)
 			case "originFeat":
 				return ec.fieldContext_Character_originFeat(ctx, field)
+			case "backgroundDescription":
+				return ec.fieldContext_Character_backgroundDescription(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Character_createdAt(ctx, field)
 			case "updatedAt":
@@ -2675,6 +2722,8 @@ func (ec *executionContext) fieldContext_Query_characters(_ context.Context, fie
 				return ec.fieldContext_Character_asiDistribution(ctx, field)
 			case "originFeat":
 				return ec.fieldContext_Character_originFeat(ctx, field)
+			case "backgroundDescription":
+				return ec.fieldContext_Character_backgroundDescription(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Character_createdAt(ctx, field)
 			case "updatedAt":
@@ -2749,6 +2798,8 @@ func (ec *executionContext) fieldContext_Query_character(ctx context.Context, fi
 				return ec.fieldContext_Character_asiDistribution(ctx, field)
 			case "originFeat":
 				return ec.fieldContext_Character_originFeat(ctx, field)
+			case "backgroundDescription":
+				return ec.fieldContext_Character_backgroundDescription(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Character_createdAt(ctx, field)
 			case "updatedAt":
@@ -5126,6 +5177,11 @@ func (ec *executionContext) _Character(ctx context.Context, sel ast.SelectionSet
 			}
 		case "originFeat":
 			out.Values[i] = ec._Character_originFeat(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "backgroundDescription":
+			out.Values[i] = ec._Character_backgroundDescription(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

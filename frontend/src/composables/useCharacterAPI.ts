@@ -9,7 +9,7 @@ const GENERATE_CHARACTER = `
   mutation GenerateCharacter($input: GenerateCharacterInput) {
     generateCharacter(input: $input) {
       id name species subSpecies class level ruleset seed
-      backgroundType asiDistribution originFeat
+      backgroundType asiDistribution originFeat backgroundDescription
       baseStats { STR DEX CON INT WIS CHA }
       finalStats { STR DEX CON INT WIS CHA }
       modifiers  { STR DEX CON INT WIS CHA }

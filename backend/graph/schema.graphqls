@@ -47,6 +47,7 @@ type Character {
   backgroundType: String!
   asiDistribution: String!
   originFeat: String!
+  backgroundDescription: String!
   createdAt: String!
   updatedAt: String!
 }
