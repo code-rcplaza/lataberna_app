@@ -9,6 +9,7 @@ const GENERATE_CHARACTER = `
   mutation GenerateCharacter($input: GenerateCharacterInput) {
     generateCharacter(input: $input) {
       id name species subSpecies class level ruleset seed
+      backgroundType asiDistribution originFeat
       baseStats { STR DEX CON INT WIS CHA }
       finalStats { STR DEX CON INT WIS CHA }
       modifiers  { STR DEX CON INT WIS CHA }
@@ -25,6 +26,7 @@ const REGENERATE_DRAFT = `
   mutation RegenerateDraft($current: CurrentCharacterInput!, $locks: CharacterLocksInput!, $seed: Int) {
     regenerateDraft(current: $current, locks: $locks, seed: $seed) {
       id name species subSpecies class level ruleset seed
+      backgroundType asiDistribution originFeat
       baseStats { STR DEX CON INT WIS CHA }
       finalStats { STR DEX CON INT WIS CHA }
       modifiers  { STR DEX CON INT WIS CHA }
