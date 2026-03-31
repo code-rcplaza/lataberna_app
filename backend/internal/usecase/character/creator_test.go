@@ -113,11 +113,11 @@ func TestCreate_ZeroInputs_ReturnsValidCharacter(t *testing.T) {
 	if out.Level != 1 {
 		t.Errorf("Level should be 1, got %d", out.Level)
 	}
-	if out.Ruleset != domain.Ruleset5e {
-		t.Errorf("Ruleset should be %q, got %q", domain.Ruleset5e, out.Ruleset)
+	if out.Ruleset != domain.Ruleset55e {
+		t.Errorf("Ruleset should be %q, got %q", domain.Ruleset55e, out.Ruleset)
 	}
-	if out.AbilityBonusSource != domain.AbilityBonusFromSpecies {
-		t.Errorf("AbilityBonusSource should be %q, got %q", domain.AbilityBonusFromSpecies, out.AbilityBonusSource)
+	if out.AbilityBonusSource != domain.AbilityBonusFromBackground {
+		t.Errorf("AbilityBonusSource should be %q, got %q", domain.AbilityBonusFromBackground, out.AbilityBonusSource)
 	}
 	if out.Background.Content == "" {
 		t.Error("Background.Content should not be empty")

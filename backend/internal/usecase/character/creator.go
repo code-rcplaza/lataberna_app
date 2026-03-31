@@ -15,20 +15,24 @@ import (
 // CreateInput — all fields optional. Omitted fields generate randomly.
 // Provided fields become implicit locks (they are preserved as-is).
 type CreateInput struct {
-	Name       *string
-	Class      *domain.Class
-	Species    *domain.Species
-	SubSpecies *domain.SubSpecies
-	Gender     *namegen.Gender // used for name generation only
-	Seed       *int64
+	Name            *string
+	Class           *domain.Class
+	Species         *domain.Species
+	SubSpecies      *domain.SubSpecies
+	Gender          *namegen.Gender // used for name generation only
+	Seed            *int64
+	BackgroundType  string // optional — empty = pick randomly (5.5e background entity)
+	ASIDistribution string // optional — "standard" or "spread"; empty = pick randomly
 }
 
 // RegenerateInput — regenerates unlocked fields of an existing character.
 // Locked fields are preserved exactly as they are.
 type RegenerateInput struct {
-	Character *domain.Character
-	Locks     domain.CharacterLocks
-	Seed      *int64
+	Character       *domain.Character
+	Locks           domain.CharacterLocks
+	Seed            *int64
+	BackgroundType  string // optional — only used when Stats are not locked
+	ASIDistribution string // optional — only used when Stats are not locked
 }
 
 // Creator orchestrates the full character generation pipeline.
@@ -63,11 +67,13 @@ func (c *Creator) Create(ctx context.Context, in CreateInput) (*domain.Character
 
 	// Steps 2–8: generate stat block.
 	statOut, err := statblock.Generate(statblock.Input{
-		Class:      &class,
-		Species:    &species,
-		SubSpecies: subSpecies,
-		Level:      1,
-		Seed:       &statSeed,
+		Class:           &class,
+		Species:         &species,
+		SubSpecies:      subSpecies,
+		Level:           1,
+		Seed:            &statSeed,
+		BackgroundType:  in.BackgroundType,
+		ASIDistribution: in.ASIDistribution,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("character.Create: stat block: %w", err)
@@ -97,8 +103,10 @@ func (c *Creator) Create(ctx context.Context, in CreateInput) (*domain.Character
 		SubSpecies:         subSpecies,
 		Class:              class,
 		Level:              1,
-		Ruleset:            domain.Ruleset5e,
-		AbilityBonusSource: domain.AbilityBonusFromSpecies,
+		Ruleset:            domain.Ruleset55e,
+		AbilityBonusSource: domain.AbilityBonusFromBackground,
+		BackgroundType:     statOut.BackgroundType,
+		ASIDistribution:    statOut.ASIDistribution,
 		BaseStats:          statOut.BaseStats,
 		FinalStats:         statOut.FinalStats,
 		Modifiers:          statOut.Modifiers,
@@ -142,11 +150,13 @@ func (c *Creator) Regenerate(ctx context.Context, in RegenerateInput) (*domain.C
 
 	if !in.Locks.Stats {
 		statOut, err := statblock.Generate(statblock.Input{
-			Class:      &updated.Class,
-			Species:    &updated.Species,
-			SubSpecies: updated.SubSpecies,
-			Level:      updated.Level,
-			Seed:       &statSeed,
+			Class:           &updated.Class,
+			Species:         &updated.Species,
+			SubSpecies:      updated.SubSpecies,
+			Level:           updated.Level,
+			Seed:            &statSeed,
+			BackgroundType:  in.BackgroundType,
+			ASIDistribution: in.ASIDistribution,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("character.Regenerate: stats: %w", err)
@@ -155,6 +165,8 @@ func (c *Creator) Regenerate(ctx context.Context, in RegenerateInput) (*domain.C
 		updated.FinalStats = statOut.FinalStats
 		updated.Modifiers = statOut.Modifiers
 		updated.Derived = statOut.Derived
+		updated.BackgroundType = statOut.BackgroundType
+		updated.ASIDistribution = statOut.ASIDistribution
 	}
 
 	if !in.Locks.Background || !in.Locks.Motivation || !in.Locks.Secret {
