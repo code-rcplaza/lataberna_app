@@ -79,6 +79,7 @@ export interface Character {
   locks: CharacterLocks
   seed?: number
   backgroundType?: string
+  backgroundDescription?: string
   asiDistribution?: string
   originFeat?: string
   createdAt: string
