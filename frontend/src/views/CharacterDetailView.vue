@@ -290,6 +290,10 @@ async function submitEditName() {
             </span>
           </div>
         </div>
+        <div v-if="libraryStore.selected.backgroundDescription" class="flex flex-col gap-1 pt-1">
+          <span class="text-[10px] font-bold uppercase tracking-widest text-secondary">Descripción de la dote</span>
+          <span class="font-body text-on-surface text-sm">{{ libraryStore.selected.backgroundDescription }}</span>
+        </div>
       </div>
 
       <!-- Attributes -->
