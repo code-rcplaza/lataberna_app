@@ -78,6 +78,9 @@ export interface Character {
   secret: NarrativeBlock
   locks: CharacterLocks
   seed?: number
+  backgroundType?: string
+  asiDistribution?: string
+  originFeat?: string
   createdAt: string
   updatedAt: string
 }

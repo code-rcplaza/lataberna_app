@@ -54,6 +54,7 @@ const CHARACTER_DETAIL_FIELDS = `
   motivation { category content tags }
   secret     { category content tags }
   locks { name stats background motivation secret }
+  backgroundType asiDistribution originFeat
 `
 
 const LIST_CHARACTERS = `

@@ -166,6 +166,27 @@ function proficiencyBonus(level: number): string {
       </div>
     </div>
 
+    <!-- ── Trasfondo 5.5e ── -->
+    <div v-if="character.backgroundType" class="bg-surface-container-low p-5 space-y-3">
+      <h3 class="font-headline text-lg font-bold text-on-surface">Trasfondo</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="flex flex-col gap-1">
+          <span class="text-[10px] font-bold uppercase tracking-widest text-secondary">Trasfondo</span>
+          <span class="font-body text-on-surface text-sm">{{ character.backgroundType }}</span>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="text-[10px] font-bold uppercase tracking-widest text-secondary">Dote de origen</span>
+          <span class="font-body text-on-surface text-sm">{{ character.originFeat ?? '—' }}</span>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="text-[10px] font-bold uppercase tracking-widest text-secondary">Distribución de atributos</span>
+          <span class="font-body text-on-surface text-sm">
+            {{ character.asiDistribution === 'standard' ? '+2 / +1' : character.asiDistribution === 'spread' ? '+1 / +1 / +1' : (character.asiDistribution ?? '—') }}
+          </span>
+        </div>
+      </div>
+    </div>
+
     <!-- ── Narrativa ── -->
     <div class="space-y-6">
       <h3 class="font-headline text-lg font-bold text-on-surface">Narrativa</h3>

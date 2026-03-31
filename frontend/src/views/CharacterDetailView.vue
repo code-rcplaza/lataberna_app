@@ -271,6 +271,27 @@ async function submitEditName() {
         </div>
       </div>
 
+      <!-- Trasfondo 5.5e -->
+      <div v-if="libraryStore.selected.backgroundType" class="bg-surface-container-low p-5 space-y-3">
+        <h3 class="font-headline text-lg font-bold text-on-surface">Trasfondo</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="flex flex-col gap-1">
+            <span class="text-[10px] font-bold uppercase tracking-widest text-secondary">Trasfondo</span>
+            <span class="font-body text-on-surface text-sm">{{ libraryStore.selected.backgroundType }}</span>
+          </div>
+          <div class="flex flex-col gap-1">
+            <span class="text-[10px] font-bold uppercase tracking-widest text-secondary">Dote de origen</span>
+            <span class="font-body text-on-surface text-sm">{{ libraryStore.selected.originFeat ?? '—' }}</span>
+          </div>
+          <div class="flex flex-col gap-1">
+            <span class="text-[10px] font-bold uppercase tracking-widest text-secondary">Distribución de atributos</span>
+            <span class="font-body text-on-surface text-sm">
+              {{ libraryStore.selected.asiDistribution === 'standard' ? '+2 / +1' : libraryStore.selected.asiDistribution === 'spread' ? '+1 / +1 / +1' : (libraryStore.selected.asiDistribution ?? '—') }}
+            </span>
+          </div>
+        </div>
+      </div>
+
       <!-- Attributes -->
       <div class="space-y-3">
         <h3 class="font-headline text-lg font-bold text-on-surface">Atributos</h3>
