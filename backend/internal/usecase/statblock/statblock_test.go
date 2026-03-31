@@ -91,11 +91,9 @@ func TestGenerate_ModifiersFromFinalStats(t *testing.T) {
 	}
 }
 
-// ─── 3. FinalStats == BaseStats until background ASI is wired (5.5e stub) ────
-// TODO(5.5e): replace this test with background ASI assertions once
-// background ASI resolution is implemented in the pipeline.
+// ─── 3. Background ASI bonuses are applied — FinalStats differs from BaseStats ─
 
-func TestGenerate_FinalStatsEqualBaseStatsUnderStub(t *testing.T) {
+func TestGenerate_BackgroundASIApplied(t *testing.T) {
 	seed := int64(100)
 	in := statblock.Input{
 		Class:   ptrClass(domain.ClassBarbarian),
@@ -108,9 +106,17 @@ func TestGenerate_FinalStatsEqualBaseStatsUnderStub(t *testing.T) {
 		t.Fatalf("Generate: %v", err)
 	}
 
-	// Under the 5.5e stub, no bonuses are applied yet — FinalStats must equal BaseStats.
-	if out.FinalStats != out.BaseStats {
-		t.Errorf("FinalStats %+v != BaseStats %+v — expected equality under bonus stub", out.FinalStats, out.BaseStats)
+	// Background ASI bonuses must be applied — FinalStats must differ from BaseStats.
+	if out.FinalStats == out.BaseStats {
+		t.Errorf("FinalStats == BaseStats — expected background ASI bonuses to be applied; stats: %+v", out.BaseStats)
+	}
+
+	// BackgroundType and ASIDistribution must be populated.
+	if out.BackgroundType == "" {
+		t.Error("BackgroundType must not be empty")
+	}
+	if out.ASIDistribution != "standard" && out.ASIDistribution != "spread" {
+		t.Errorf("ASIDistribution %q is not valid — want 'standard' or 'spread'", out.ASIDistribution)
 	}
 }
 

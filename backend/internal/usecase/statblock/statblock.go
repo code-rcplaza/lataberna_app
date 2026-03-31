@@ -9,25 +9,29 @@ import (
 
 // Input for stat block generation. All fields optional — omitted = random.
 type Input struct {
-	Class      *domain.Class
-	Species    *domain.Species
-	SubSpecies *domain.SubSpecies
-	Level      int   // defaults to 1 if zero
-	Seed       *int64
+	Class           *domain.Class
+	Species         *domain.Species
+	SubSpecies      *domain.SubSpecies
+	Level           int    // defaults to 1 if zero
+	Seed            *int64
+	BackgroundType  string // optional — empty means pick randomly
+	ASIDistribution string // optional — "standard" or "spread"; empty means pick randomly
 }
 
 // Output of a stat block generation.
 type Output struct {
-	Class      domain.Class
-	Species    domain.Species
-	SubSpecies *domain.SubSpecies
-	Level      int
-	BaseStats  domain.Stats
-	FinalStats domain.Stats
-	Modifiers  domain.Modifiers
-	Derived    domain.DerivedStats
-	Armor      domain.ArmorType
-	Seed       int64
+	Class           domain.Class
+	Species         domain.Species
+	SubSpecies      *domain.SubSpecies
+	Level           int
+	BaseStats       domain.Stats
+	FinalStats      domain.Stats
+	Modifiers       domain.Modifiers
+	Derived         domain.DerivedStats
+	Armor           domain.ArmorType
+	Seed            int64
+	BackgroundType  string
+	ASIDistribution string
 }
 
 // Generate produces a character stat block based on the input parameters.
@@ -45,8 +49,24 @@ func Generate(in Input) (Output, error) {
 		return Output{}, err
 	}
 
-	// TODO(5.5e): replace with background ASI resolution
-	var bonuses []domain.AbilityBonus
+	// Resolve background and ASI distribution
+	bgType := in.BackgroundType
+	if bgType == "" {
+		bg := pickBackground(class, rng)
+		bgType = bg.Name
+	}
+	bg, bgFound := findBackground(bgType)
+	if !bgFound {
+		bg = pickBackground(class, rng)
+		bgType = bg.Name
+	}
+
+	distribution := in.ASIDistribution
+	if distribution == "" {
+		distribution = pickASIDistribution(rng)
+	}
+
+	bonuses := resolveBackgroundBonuses(bg, distribution)
 	finalStats := applyBonuses(baseStats, bonuses)
 	modifiers := calculateModifiers(finalStats)
 
@@ -61,17 +81,61 @@ func Generate(in Input) (Output, error) {
 	}
 
 	return Output{
-		Class:      class,
-		Species:    species,
-		SubSpecies: subSpecies,
-		Level:      level,
-		BaseStats:  baseStats,
-		FinalStats: finalStats,
-		Modifiers:  modifiers,
-		Derived:    derived,
-		Armor:      armor,
-		Seed:       seed,
+		Class:           class,
+		Species:         species,
+		SubSpecies:      subSpecies,
+		Level:           level,
+		BaseStats:       baseStats,
+		FinalStats:      finalStats,
+		Modifiers:       modifiers,
+		Derived:         derived,
+		Armor:           armor,
+		Seed:            seed,
+		BackgroundType:  bgType,
+		ASIDistribution: distribution,
 	}, nil
+}
+
+func resolveBackgroundBonuses(bg BackgroundEntry, distribution string) []domain.AbilityBonus {
+	var bonuses []domain.AbilityBonus
+	switch distribution {
+	case "spread":
+		// +1 to all three stats in the pool
+		for _, stat := range bg.ASIPool {
+			bonuses = append(bonuses, domain.AbilityBonus{Stat: stat, Value: 1, Source: "background"})
+		}
+	default: // "standard"
+		// +2 to first stat, +1 to second stat in the pool
+		bonuses = append(bonuses,
+			domain.AbilityBonus{Stat: bg.ASIPool[0], Value: 2, Source: "background"},
+			domain.AbilityBonus{Stat: bg.ASIPool[1], Value: 1, Source: "background"},
+		)
+	}
+	return bonuses
+}
+
+func pickBackground(class domain.Class, rng *rand.Rand) BackgroundEntry {
+	candidates := BackgroundsForClass(string(class))
+	if len(candidates) == 0 {
+		candidates = AllBackgrounds()
+	}
+	return candidates[rng.Intn(len(candidates))]
+}
+
+func pickASIDistribution(rng *rand.Rand) string {
+	if rng.Intn(2) == 0 {
+		return "standard"
+	}
+	return "spread"
+}
+
+func findBackground(name string) (BackgroundEntry, bool) {
+	for _, b := range backgroundTable {
+		if b.Name == name {
+			return b, true
+		}
+	}
+	return BackgroundEntry{}, false
 }
 
 func resolveSeed(s *int64) int64 {

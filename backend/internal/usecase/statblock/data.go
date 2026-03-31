@@ -96,20 +96,20 @@ var armorTable = map[string]domain.ArmorType{
 var backgroundTable = []BackgroundEntry{
 	{Name: "Acolyte",    ASIPool: [3]string{"WIS", "INT", "CHA"}, OriginFeat: "Magic Initiate (Cleric)",  Tags: []string{"cleric", "paladin", "druid"}},
 	{Name: "Artisan",    ASIPool: [3]string{"STR", "DEX", "INT"}, OriginFeat: "Crafter",                  Tags: []string{"any"}},
-	{Name: "Charlatan",  ASIPool: [3]string{"DEX", "CHA", "INT"}, OriginFeat: "Skilled",                  Tags: []string{"rogue", "bard", "warlock"}},
+	{Name: "Charlatan",  ASIPool: [3]string{"DEX", "CON", "CHA"}, OriginFeat: "Lucky",                    Tags: []string{"rogue", "bard", "warlock"}},
 	{Name: "Criminal",   ASIPool: [3]string{"DEX", "CON", "INT"}, OriginFeat: "Alert",                    Tags: []string{"rogue", "ranger", "warlock"}},
-	{Name: "Entertainer",ASIPool: [3]string{"DEX", "CHA", "STR"}, OriginFeat: "Musician",                 Tags: []string{"bard", "rogue", "sorcerer"}},
+	{Name: "Entertainer",ASIPool: [3]string{"STR", "DEX", "CHA"}, OriginFeat: "Musician",                 Tags: []string{"bard", "rogue", "sorcerer"}},
 	{Name: "Farmer",     ASIPool: [3]string{"STR", "CON", "WIS"}, OriginFeat: "Tough",                    Tags: []string{"any"}},
 	{Name: "Guard",      ASIPool: [3]string{"STR", "INT", "CHA"}, OriginFeat: "Alert",                    Tags: []string{"fighter", "paladin", "ranger"}},
 	{Name: "Guide",      ASIPool: [3]string{"DEX", "CON", "WIS"}, OriginFeat: "Magic Initiate (Druid)",   Tags: []string{"ranger", "druid", "monk"}},
-	{Name: "Hermit",     ASIPool: [3]string{"CON", "INT", "WIS"}, OriginFeat: "Magic Initiate (Druid)",   Tags: []string{"druid", "monk", "wizard"}},
+	{Name: "Hermit",     ASIPool: [3]string{"CON", "WIS", "CHA"}, OriginFeat: "Healer",                   Tags: []string{"druid", "monk", "cleric"}},
 	{Name: "Merchant",   ASIPool: [3]string{"CON", "INT", "CHA"}, OriginFeat: "Lucky",                    Tags: []string{"any"}},
-	{Name: "Noble",      ASIPool: [3]string{"STR", "INT", "CHA"}, OriginFeat: "Skilled",                  Tags: []string{"paladin", "fighter", "bard", "warlock"}},
+	{Name: "Noble",      ASIPool: [3]string{"STR", "INT", "CHA"}, OriginFeat: "Musician",                 Tags: []string{"paladin", "fighter", "bard", "warlock"}},
 	{Name: "Sage",       ASIPool: [3]string{"CON", "INT", "WIS"}, OriginFeat: "Magic Initiate (Wizard)",  Tags: []string{"wizard", "sorcerer", "artificer"}},
 	{Name: "Sailor",     ASIPool: [3]string{"STR", "DEX", "WIS"}, OriginFeat: "Tavern Brawler",           Tags: []string{"any"}},
-	{Name: "Scribe",     ASIPool: [3]string{"DEX", "INT", "WIS"}, OriginFeat: "Skilled",                  Tags: []string{"wizard", "artificer", "cleric"}},
+	{Name: "Scribe",     ASIPool: [3]string{"DEX", "INT", "WIS"}, OriginFeat: "Magic Initiate (Wizard)",  Tags: []string{"wizard", "artificer", "cleric"}},
 	{Name: "Soldier",    ASIPool: [3]string{"STR", "DEX", "CON"}, OriginFeat: "Savage Attacker",          Tags: []string{"fighter", "paladin", "ranger", "barbarian"}},
-	{Name: "Wayfarer",   ASIPool: [3]string{"DEX", "WIS", "CHA"}, OriginFeat: "Lucky",                    Tags: []string{"rogue", "ranger", "bard", "monk"}},
+	{Name: "Wayfarer",   ASIPool: [3]string{"DEX", "WIS", "CHA"}, OriginFeat: "Magic Initiate (Druid)",   Tags: []string{"rogue", "ranger", "bard", "monk"}},
 }
 
 // BackgroundsForClass returns all backgrounds whose tags include the given class or "any".
