@@ -210,15 +210,26 @@ function fieldClass(locked: boolean) {
       <p class="text-[10px] text-outline font-body italic">Solo cosmético — no afecta la generación</p>
     </div>
 
-    <!-- Sorpréndeme button -->
-    <button
-      @click="generate()"
-      :disabled="store.isLoading"
-      class="w-full bg-primary text-on-primary font-label font-bold uppercase tracking-widest py-4 text-sm hover:bg-primary-container hover:text-on-primary-container transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-    >
-      <span v-if="store.isLoading" class="material-symbols-outlined text-base animate-spin">autorenew</span>
-      <span>{{ store.isLoading ? 'Generando…' : '¡Sorpréndeme!' }}</span>
-    </button>
+    <!-- Actions -->
+    <div class="flex flex-col gap-2">
+      <button
+        @click="generate()"
+        :disabled="store.isLoading"
+        class="w-full bg-primary text-on-primary font-label font-bold uppercase tracking-widest py-4 text-sm hover:bg-primary-container hover:text-on-primary-container transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+      >
+        <span v-if="store.isLoading" class="material-symbols-outlined text-base animate-spin">autorenew</span>
+        <span>{{ store.isLoading ? 'Generando…' : '¡Sorpréndeme!' }}</span>
+      </button>
+      <button
+        v-if="store.current"
+        @click="store.reset()"
+        :disabled="store.isLoading"
+        class="w-full border border-outline-variant text-secondary font-label font-bold uppercase tracking-widest py-2 text-xs hover:border-outline hover:text-on-surface transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+      >
+        <span class="material-symbols-outlined text-sm">close</span>
+        Limpiar
+      </button>
+    </div>
 
     <!-- Flavor note -->
     <div class="border-l-2 border-primary-container/40 pl-4 py-2 bg-surface-container rounded-sm">

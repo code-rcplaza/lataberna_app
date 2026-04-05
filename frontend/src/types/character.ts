@@ -111,6 +111,7 @@ export interface EditCharacterInput {
 }
 
 export interface GeneratorLocks {
+  name: boolean
   species: boolean
   subSpecies: boolean
   class: boolean

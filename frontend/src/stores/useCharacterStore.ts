@@ -16,6 +16,7 @@ export const useCharacterStore = defineStore('character', () => {
   })
 
   const locks = ref<GeneratorLocks>({
+    name: false,
     species: false,
     subSpecies: false,
     class: false,
@@ -43,5 +44,29 @@ export const useCharacterStore = defineStore('character', () => {
     isSaved.value = true
   }
 
-  return { current, isLoading, isSaved, input, locks, toggleLock, setCharacter, setSaved }
+  function reset() {
+    current.value = null
+    isSaved.value = false
+    input.value = {
+      species: 'random',
+      subSpecies: 'random',
+      class: 'random',
+      gender: 'random',
+      alignment: 'random',
+    }
+    locks.value = {
+      name: false,
+      species: false,
+      subSpecies: false,
+      class: false,
+      gender: false,
+      alignment: false,
+      stats: false,
+      background: false,
+      motivation: false,
+      secret: false,
+    }
+  }
+
+  return { current, isLoading, isSaved, input, locks, toggleLock, setCharacter, setSaved, reset }
 })

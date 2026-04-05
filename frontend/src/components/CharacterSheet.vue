@@ -98,7 +98,7 @@ function proficiencyBonus(level: number): string {
           <h1 class="font-headline text-4xl font-bold text-on-surface">{{ character.name }}</h1>
           <button
             @click="regenerateField('name')"
-            :disabled="store.isLoading || store.locks.species"
+            :disabled="store.isLoading || store.locks.name"
             class="text-outline hover:text-primary transition-colors disabled:opacity-40"
             title="Regenerar nombre"
           >

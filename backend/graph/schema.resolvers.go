@@ -175,7 +175,7 @@ func (r *mutationResolver) RegenerateDraft(ctx context.Context, current model.Cu
 		SubSpecies:         subSpecies,
 		Level:              1,
 		Ruleset:            domain.Ruleset5e,
-		AbilityBonusSource: domain.AbilityBonusFromSpecies,
+		AbilityBonusSource: domain.AbilityBonusFromBackground,
 		BaseStats:          finalStats,
 		FinalStats:         finalStats,
 		Modifiers:          modifiers,
