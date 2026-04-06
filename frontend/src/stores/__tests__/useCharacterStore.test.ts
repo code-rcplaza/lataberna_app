@@ -95,5 +95,50 @@ describe('useCharacterStore', () => {
       expect(store.locks.motivation).toBe(false)
       expect(store.locks.secret).toBe(false)
     })
+
+    it('toggles the name lock independently', () => {
+      const store = useCharacterStore()
+      expect(store.locks.name).toBe(false)
+      store.toggleLock('name')
+      expect(store.locks.name).toBe(true)
+      expect(store.locks.stats).toBe(false)
+    })
+  })
+
+  describe('reset', () => {
+    it('clears the current character', () => {
+      const store = useCharacterStore()
+      store.setCharacter(makeCharacter())
+      store.reset()
+      expect(store.current).toBeNull()
+    })
+
+    it('resets isSaved to false', () => {
+      const store = useCharacterStore()
+      store.setSaved(makeCharacter())
+      store.reset()
+      expect(store.isSaved).toBe(false)
+    })
+
+    it('resets all inputs to their defaults', () => {
+      const store = useCharacterStore()
+      store.input.species = 'dwarf'
+      store.input.class = 'fighter'
+      store.input.seed = 12345
+      store.reset()
+      expect(store.input.species).toBe('random')
+      expect(store.input.class).toBe('random')
+      expect(store.input.seed).toBeUndefined()
+    })
+
+    it('resets all locks to false', () => {
+      const store = useCharacterStore()
+      store.toggleLock('name')
+      store.toggleLock('stats')
+      store.toggleLock('background')
+      store.reset()
+      const allUnlocked = Object.values(store.locks).every(v => v === false)
+      expect(allUnlocked).toBe(true)
+    })
   })
 })
