@@ -1,0 +1,55 @@
+---
+const APP_URL = import.meta.env.PUBLIC_APP_URL ?? '/forja'
+---
+<section class="relative min-h-[850px] flex items-center px-6 md:px-12 max-w-screen-2xl mx-auto py-24 overflow-hidden">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
+    <div class="lg:col-span-7 z-10">
+      <span class="inline-block font-label uppercase tracking-[0.3em] text-secondary text-xs mb-6">
+        Volumen I: El Libro de Almas
+      </span>
+      <h1 class="font-headline text-7xl md:text-8xl text-primary leading-[0.9] tracking-tight mb-8 italic">
+        Forja héroes para mundos que perduran.
+      </h1>
+      <p class="font-headline text-2xl text-on-surface-variant max-w-xl mb-12 leading-relaxed">
+        Entra a la taberna donde las leyendas toman forma. Desde los cimientos más simples hasta los destinos más complejos, da vida a tus personajes con la precisión de un maestro de mazmorras.
+      </p>
+      <div class="flex flex-wrap gap-8 items-center">
+        <a
+          href={APP_URL}
+          class="bg-primary-container text-white px-10 py-5 font-label uppercase tracking-widest text-sm shadow-xl shadow-primary/10 hover:bg-primary transition-colors"
+        >
+          Entrar a la Taberna
+        </a>
+        <a href="#metodo" class="font-headline text-xl text-primary flex items-center gap-3 group">
+          <span>Ver el Método del Archivista</span>
+          <span class="material-symbols-outlined group-hover:translate-x-2 transition-transform">arrow_right_alt</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="lg:col-span-5 relative flex justify-center">
+      <div class="w-full aspect-[4/5] bg-surface-container-low rounded-sm overflow-hidden relative rotate-2 shadow-2xl z-20">
+        <!-- TODO: reemplazar con asset propio — imagen de un diario de cuero sobre mesa con atmósfera de taberna -->
+        <img
+          src="/images/hero-journal.jpg"
+          alt="Diario de cuero sobre una mesa con atmósfera de taberna"
+          class="w-full h-full object-cover grayscale-[0.2] sepia-[0.2]"
+          width="600"
+          height="750"
+        />
+        <div class="absolute inset-0 bg-primary/5"></div>
+      </div>
+      <div class="absolute -bottom-12 -left-12 w-64 aspect-square bg-surface-container-lowest shadow-xl -rotate-6 p-4 z-30 hidden xl:block border border-outline-variant/10">
+        <!-- TODO: reemplazar con asset propio — boceto de personaje sobre pergamino -->
+        <img
+          src="/images/hero-sketch.jpg"
+          alt="Boceto de personaje sobre pergamino"
+          class="w-full h-full object-cover"
+          width="256"
+          height="256"
+        />
+      </div>
+    </div>
+  </div>
+  <div class="absolute inset-0 bg-gradient-to-tr from-surface-container-low/30 via-transparent to-surface-container-low/20 -z-10"></div>
+</section>

@@ -1,0 +1,24 @@
+---
+const APP_URL = import.meta.env.PUBLIC_APP_URL ?? '/forja'
+---
+<header class="bg-background sticky top-0 z-50">
+  <div class="flex justify-between items-center px-6 md:px-12 py-6 w-full max-w-screen-2xl mx-auto">
+    <div class="text-2xl font-bold font-headline italic text-on-surface">
+      La Taberna RPG
+    </div>
+    <nav class="hidden md:flex items-center space-x-12 font-headline tracking-tight">
+      <a href="#metodo" class="text-secondary hover:text-primary-container transition-colors duration-300">Método</a>
+      <a href="#fichas" class="text-secondary hover:text-primary-container transition-colors duration-300">Fichas</a>
+      <a href="#bestiario" class="text-secondary opacity-40 cursor-not-allowed">Bestiario</a>
+    </nav>
+    <div class="flex items-center gap-6">
+      <a
+        href={APP_URL}
+        class="bg-primary-container text-white px-6 py-2.5 font-label uppercase tracking-widest text-xs hover:bg-primary transition-colors"
+      >
+        Crear Personaje
+      </a>
+    </div>
+  </div>
+  <div class="bg-surface-container-low h-px w-full"></div>
+</header>

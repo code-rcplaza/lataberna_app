@@ -1,0 +1,10 @@
+{
+  "rewrites": [
+    { "source": "/forja", "destination": "https://app-lataberna.vercel.app/forja" },
+    { "source": "/forja/(.*)", "destination": "https://app-lataberna.vercel.app/forja/$1" },
+    { "source": "/biblioteca", "destination": "https://app-lataberna.vercel.app/biblioteca" },
+    { "source": "/biblioteca/(.*)", "destination": "https://app-lataberna.vercel.app/biblioteca/$1" },
+    { "source": "/auth", "destination": "https://app-lataberna.vercel.app/auth" },
+    { "source": "/auth/(.*)", "destination": "https://app-lataberna.vercel.app/auth/$1" }
+  ]
+}
