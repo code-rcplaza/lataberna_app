@@ -76,6 +76,21 @@ const alignmentOptions = [
   { value: 'caotico-malvado', label: 'Caótico Malvado' },
 ]
 
+// ── Dirty check ───────────────────────────────────────────────────────────────
+const isDirty = computed(() => {
+  const i = store.input
+  const l = store.locks
+  const inputChanged =
+    (i.species   && i.species   !== 'random') ||
+    (i.subSpecies && i.subSpecies !== 'random') ||
+    (i.class     && i.class     !== 'random') ||
+    (i.gender    && i.gender    !== 'random') ||
+    (i.alignment && i.alignment !== 'random') ||
+    i.seed != null
+  const locksChanged = Object.values(l).some(Boolean)
+  return inputChanged || locksChanged
+})
+
 // ── Helper ─────────────────────────────────────────────────────────────────────
 function fieldClass(locked: boolean) {
   return locked
@@ -221,7 +236,7 @@ function fieldClass(locked: boolean) {
         <span>{{ store.isLoading ? 'Generando…' : '¡Sorpréndeme!' }}</span>
       </button>
       <button
-        v-if="store.current"
+        v-if="isDirty"
         @click="store.reset()"
         :disabled="store.isLoading"
         class="w-full border border-outline-variant text-secondary font-label font-bold uppercase tracking-widest py-2 text-xs hover:border-outline hover:text-on-surface transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
